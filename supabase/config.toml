@@ -1,0 +1,13 @@
+project_id = "duo-os"
+
+[functions.morning-briefing]
+schedule = "0 7 * * *"   # 7am todos los días
+
+[functions.churn-detector]
+schedule = "0 8 * * *"   # 8am todos los días
+
+[functions.recurring-transactions]
+schedule = "0 0 1 * *"   # 1ro de cada mes
+
+[functions.google-oauth-exchange]
+verify_jwt = false
