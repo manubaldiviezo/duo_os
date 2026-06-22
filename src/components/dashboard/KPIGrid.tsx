@@ -1,12 +1,11 @@
+import type { Icon } from '@tabler/icons-react';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
-
-type TablerIcon = React.ComponentType<{ size?: number; className?: string }>;
 
 export interface KPIItem {
   label: string;
   value: string;
-  icon: TablerIcon;
+  icon: Icon;
   tone?: 'default' | 'red' | 'green' | 'orange';
 }
 
