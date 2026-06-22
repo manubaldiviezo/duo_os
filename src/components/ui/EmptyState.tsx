@@ -1,7 +1,7 @@
-type TablerIcon = React.ComponentType<{ size?: number; className?: string }>;
+import type { Icon } from '@tabler/icons-react';
 
 interface EmptyStateProps {
-  icon?: TablerIcon;
+  icon?: Icon;
   title: string;
   description?: string;
   action?: React.ReactNode;
