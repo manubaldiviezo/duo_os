@@ -48,7 +48,24 @@ export async function callGemini(opts: GeminiOptions): Promise<any> {
     });
 
     const data = await response.json();
+
+    // Si Google devolvió un error, mostrarlo en vez de esconderlo.
+    if (!response.ok || data.error) {
+      const msg = data?.error?.message ?? `HTTP ${response.status}`;
+      // eslint-disable-next-line no-console
+      console.error('Gemini API error:', data);
+      return opts.expectJSON ? { error: 'api_error', message: msg } : `⚠️ Gemini: ${msg}`;
+    }
+
     const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+    // Respuesta sin texto (p. ej. bloqueada o cortada): avisar el motivo.
+    if (!text) {
+      const reason = data.candidates?.[0]?.finishReason ?? 'sin contenido';
+      return opts.expectJSON
+        ? { error: 'empty', reason }
+        : `⚠️ La IA no devolvió texto (motivo: ${reason}).`;
+    }
 
     if (opts.expectJSON) {
       try {
