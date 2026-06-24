@@ -374,7 +374,7 @@ export function Assistant() {
             <div className="flex gap-2">
               <Button size="sm" className="flex-1" onClick={confirmAction}>
                 <span className="flex items-center justify-center gap-1">
-                  <IconCheck size={16 /> Confirmar
+                  <IconCheck size={16} /> Confirmar
                 </span>
               </Button>
 
