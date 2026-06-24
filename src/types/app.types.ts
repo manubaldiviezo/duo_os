@@ -74,9 +74,19 @@ export interface Task {
   actual_minutes: number | null;
   created_via: TaskSource;
   completed_at: string | null;
+  assigned_member_id: string | null;
   created_at: string;
   updated_at: string;
   client?: { name: string } | null;
+}
+
+export interface TeamMember {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string | null;
+  role: string | null;
+  created_at: string;
 }
 
 export interface Transaction {

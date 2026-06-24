@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuthListener } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
+import { applyBrandColor } from '@/lib/utils';
 import { AppShell } from '@/components/layout/AppShell';
 import { ToastContainer } from '@/components/ui/Toast';
 import { LoadingDots } from '@/components/ui/LoadingDots';
@@ -28,6 +30,11 @@ function FullScreenLoader() {
 export default function App() {
   useAuthListener();
   const { session, profile, loading } = useAuthStore();
+
+  // Aplica el color de marca del perfil a toda la app cuando carga/cambia.
+  useEffect(() => {
+    applyBrandColor(profile?.brand_color);
+  }, [profile?.brand_color]);
 
   if (loading) return <FullScreenLoader />;
 

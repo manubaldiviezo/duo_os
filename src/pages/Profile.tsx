@@ -10,6 +10,10 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
+import { TeamSection } from '@/components/settings/TeamSection';
+import { applyBrandColor, cn } from '@/lib/utils';
+
+const BRAND_COLORS = ['#7F77DD', '#FF2D55', '#34C759', '#007AFF', '#FF9500', '#AF52DE', '#FF3B30', '#5856D6'];
 
 type AIFeatures = Record<string, boolean>;
 
@@ -67,6 +71,14 @@ export function Profile() {
     await supabase.from('settings').update({ ai_features_enabled: next }).eq('user_id', user.id);
   }
 
+  async function changeColor(hex: string) {
+    if (!user) return;
+    applyBrandColor(hex); // cambio inmediato en pantalla
+    if (profile) setProfile({ ...profile, brand_color: hex });
+    await supabase.from('profiles').update({ brand_color: hex }).eq('id', user.id);
+    toast('Color actualizado', 'success');
+  }
+
   return (
     <div>
       <TopBar title="Perfil" subtitle={profile?.agency_name} />
@@ -85,6 +97,43 @@ export function Profile() {
             Guardar cambios
           </Button>
         </Card>
+
+        <Card className="space-y-3">
+          <h2 className="text-sm font-semibold text-ios-text-2">Color de marca</h2>
+          <div className="flex flex-wrap gap-3">
+            {BRAND_COLORS.map((c) => (
+              <button
+                key={c}
+                onClick={() => changeColor(c)}
+                className={cn(
+                  'h-10 w-10 rounded-full transition-transform active:scale-90',
+                  profile?.brand_color?.toLowerCase() === c.toLowerCase() &&
+                    'ring-2 ring-offset-2 ring-offset-ios-card'
+                )}
+                style={{
+                  backgroundColor: c,
+                  boxShadow:
+                    profile?.brand_color?.toLowerCase() === c.toLowerCase() ? `0 0 0 3px ${c}` : undefined,
+                }}
+                aria-label={`Color ${c}`}
+              />
+            ))}
+            <label
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-ios-text-3 text-xs text-ios-text-3"
+              title="Color personalizado"
+            >
+              +
+              <input
+                type="color"
+                className="sr-only"
+                value={profile?.brand_color ?? '#7F77DD'}
+                onChange={(e) => changeColor(e.target.value)}
+              />
+            </label>
+          </div>
+        </Card>
+
+        <TeamSection />
 
         <Card className="space-y-4">
           <h2 className="text-sm font-semibold text-ios-text-2">Funciones de IA</h2>

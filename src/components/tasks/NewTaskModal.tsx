@@ -6,7 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
-import type { Client, TaskCategory, TaskPriority } from '@/types/app.types';
+import type { Client, TaskCategory, TaskPriority, TeamMember } from '@/types/app.types';
 
 const CATEGORIES: { value: TaskCategory; label: string }[] = [
   { value: 'strategy', label: 'Estrategia' },
@@ -36,9 +36,11 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId }: NewT
   const user = useAuthStore((s) => s.user);
   const toast = useUIStore((s) => s.toast);
   const [clients, setClients] = useState<Client[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState(defaultClientId ?? '');
+  const [memberId, setMemberId] = useState('');
   const [category, setCategory] = useState<TaskCategory>('other');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [dueDate, setDueDate] = useState('');
@@ -51,6 +53,11 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId }: NewT
       .select('*')
       .eq('user_id', user.id)
       .then(({ data }) => setClients((data as Client[]) ?? []));
+    supabase
+      .from('team_members')
+      .select('*')
+      .eq('user_id', user.id)
+      .then(({ data }) => setMembers((data as TeamMember[]) ?? []));
     setClientId(defaultClientId ?? '');
   }, [open, user, defaultClientId]);
 
@@ -60,7 +67,7 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId }: NewT
       return;
     }
     setLoading(true);
-    const { error } = await supabase.from('tasks').insert({
+    const payload: Record<string, unknown> = {
       user_id: user.id,
       title: title.trim(),
       description: description.trim() || null,
@@ -69,7 +76,10 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId }: NewT
       priority,
       due_date: dueDate ? new Date(dueDate).toISOString() : null,
       created_via: 'manual',
-    });
+    };
+    // Solo se envía si asignas a alguien (la columna requiere la migración 003).
+    if (memberId) payload.assigned_member_id = memberId;
+    const { error } = await supabase.from('tasks').insert(payload);
     setLoading(false);
     if (error) {
       toast(error.message, 'error');
@@ -79,6 +89,7 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId }: NewT
     setTitle('');
     setDescription('');
     setDueDate('');
+    setMemberId('');
     onCreated();
     onClose();
   }
@@ -144,6 +155,24 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId }: NewT
             </select>
           </div>
         </div>
+
+        {members.length > 0 && (
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-ios-text-2">Responsable</label>
+            <select
+              value={memberId}
+              onChange={(e) => setMemberId(e.target.value)}
+              className="w-full rounded-xl bg-ios-bg px-4 py-3 text-sm text-ios-text outline-none"
+            >
+              <option value="">Sin asignar</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <Input
           label="Fecha límite"

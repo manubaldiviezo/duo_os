@@ -65,3 +65,36 @@ export function isOverdue(dueDate: string | null): boolean {
   if (!dueDate) return false;
   return new Date(dueDate).getTime() < Date.now();
 }
+
+/**
+ * Aclara (amount > 0) u oscurece (amount < 0) un color hex.
+ * amount va de -1 (negro) a 1 (blanco).
+ */
+export function shadeColor(hex: string, amount: number): string {
+  const clean = hex.replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map((x) => x + x).join('') : clean;
+  const num = parseInt(full, 16);
+  let r = (num >> 16) & 0xff;
+  let g = (num >> 8) & 0xff;
+  let b = num & 0xff;
+  if (amount >= 0) {
+    r = Math.round(r + (255 - r) * amount);
+    g = Math.round(g + (255 - g) * amount);
+    b = Math.round(b + (255 - b) * amount);
+  } else {
+    const a = 1 + amount;
+    r = Math.round(r * a);
+    g = Math.round(g * a);
+    b = Math.round(b * a);
+  }
+  return '#' + [r, g, b].map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
+}
+
+/** Aplica el color de marca a las variables CSS para que afecte toda la app. */
+export function applyBrandColor(hex?: string | null): void {
+  if (!hex) return;
+  const root = document.documentElement;
+  root.style.setProperty('--brand', hex);
+  root.style.setProperty('--brand-d', shadeColor(hex, -0.25));
+  root.style.setProperty('--brand-l', shadeColor(hex, 0.85));
+}
