@@ -129,6 +129,20 @@ La app envía correos a través de la Edge Function `send-email` (server-side). 
 
 > Las **tareas automáticas al crear un cliente** funcionan apenas corras la migración (es un trigger en la base, no necesita cron).
 
+## 📅 Reuniones (Google Calendar + Meet)
+
+Crear reunión genera un evento en Google Calendar con link de Meet e invitación por email al asistente.
+
+**Pasos (una sola vez):**
+1. En Google Cloud Console: habilita **Google Calendar API** y agrega el scope `https://www.googleapis.com/auth/calendar.events` al consentimiento.
+2. Asegúrate de tener los secretos en Supabase: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`.
+3. Despliega la función:
+   ```bash
+   supabase functions deploy create-meeting
+   ```
+4. En la app: **Perfil → Integraciones → Google Calendar → Conectar** (autoriza con tu Google).
+5. Crea una reunión desde el botón 📅 del inicio.
+
 ## 📱 Instalar como app en iPhone
 Abre la URL de Vercel en Safari → **Compartir → Añadir a pantalla de inicio**.
 

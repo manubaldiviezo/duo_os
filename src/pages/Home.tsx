@@ -8,7 +8,9 @@ import {
   IconEye,
   IconEyeOff,
   IconBulb,
+  IconCalendarPlus,
 } from '@tabler/icons-react';
+import { NewMeetingModal } from '@/components/meetings/NewMeetingModal';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { calculateMRR, type MRRResult } from '@/lib/mrr';
@@ -43,6 +45,7 @@ export function Home() {
   const [insights, setInsights] = useState<AiInsight[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
+  const [showMeeting, setShowMeeting] = useState(false);
   // Privacidad: por defecto las finanzas van ocultas (seguro si hay gente cerca).
   const [showMoney, setShowMoney] = useState(() => localStorage.getItem('duo_show_money') === 'on');
 
@@ -164,8 +167,24 @@ export function Home() {
       <TopBar
         title={profile?.user_name ?? 'Inicio'}
         subtitle={greeting()}
+        leading={
+          profile?.logo_url ? (
+            <img
+              src={profile.logo_url}
+              alt="Logo"
+              className="h-10 w-10 shrink-0 rounded-xl object-contain"
+            />
+          ) : undefined
+        }
         right={
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowMeeting(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-ios-card text-ios-text-2"
+              aria-label="Nueva reunión"
+            >
+              <IconCalendarPlus size={20} />
+            </button>
             <button
               onClick={() => navigate('/ideas')}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-ios-card text-ios-text-2"
@@ -240,6 +259,8 @@ export function Home() {
           )}
         </section>
       </div>
+
+      <NewMeetingModal open={showMeeting} onClose={() => setShowMeeting(false)} onCreated={load} />
     </div>
   );
 }

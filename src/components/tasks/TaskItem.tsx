@@ -14,9 +14,10 @@ interface TaskItemProps {
   task: Task;
   onToggle: (task: Task) => void;
   onDelete: (task: Task) => void;
+  onEdit?: (task: Task) => void;
 }
 
-export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
+export function TaskItem({ task, onToggle, onDelete, onEdit }: TaskItemProps) {
   const done = task.status === 'done';
   const overdue = !done && isOverdue(task.due_date);
 
@@ -41,7 +42,7 @@ export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
             <IconCircle size={24} className="text-ios-text-3" />
           )}
         </button>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1" onClick={() => onEdit?.(task)}>
           <p
             className={cn(
               'truncate text-sm font-medium',

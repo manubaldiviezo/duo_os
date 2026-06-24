@@ -1,14 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="22" fill="#000000" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110">
+  <rect width="110" height="110" rx="24" fill="#000000" />
   <defs>
-    <linearGradient id="g" x1="40" y1="18" x2="60" y2="82" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="40" y1="26" x2="66" y2="80" gradientUnits="userSpaceOnUse">
       <stop stop-color="#F8AC1F" />
       <stop offset="1" stop-color="#F26B1E" />
     </linearGradient>
   </defs>
-  <path d="M34 40 V57 a16 16 0 0 0 32 0 V40" stroke="url(#g)" stroke-width="13" stroke-linecap="round" fill="none" />
-  <rect x="21" y="20" width="10.5" height="10.5" rx="1.5" fill="#F8AC1F" />
-  <rect x="31" y="30" width="10.5" height="10.5" rx="1.5" fill="#F4881E" />
-  <rect x="58.5" y="20" width="10.5" height="10.5" rx="1.5" fill="#F26B1E" />
-  <rect x="58.5" y="30" width="10.5" height="10.5" rx="1.5" fill="#F4881E" />
+  <path d="M44 52 V66 a11 11 0 0 0 22 0 V52" stroke="url(#g)" stroke-width="13" stroke-linecap="round" fill="none" />
+  <rect x="28" y="28" width="11" height="11" rx="1.5" fill="#F8AC1F" />
+  <rect x="38.5" y="39" width="11" height="11" rx="1.5" fill="#F4881E" />
+  <rect x="60.5" y="28" width="11" height="11" rx="1.5" fill="#F26B1E" />
+  <rect x="60.5" y="39" width="11" height="11" rx="1.5" fill="#F4881E" />
 </svg>

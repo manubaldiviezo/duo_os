@@ -27,6 +27,7 @@ export function Tasks() {
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
+  const [editing, setEditing] = useState<Task | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -91,7 +92,10 @@ export function Tasks() {
               <IconMicrophone size={20} />
             </button>
             <button
-              onClick={() => setShowNew(true)}
+              onClick={() => {
+                setEditing(null);
+                setShowNew(true);
+              }}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-white"
             >
               <IconPlus size={20} />
@@ -125,13 +129,30 @@ export function Tasks() {
         ) : (
           <div className="space-y-2">
             {filtered.map((t) => (
-              <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} />
+              <TaskItem
+                key={t.id}
+                task={t}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                onEdit={(task) => {
+                  setEditing(task);
+                  setShowNew(true);
+                }}
+              />
             ))}
           </div>
         )}
       </div>
 
-      <NewTaskModal open={showNew} onClose={() => setShowNew(false)} onCreated={load} />
+      <NewTaskModal
+        open={showNew}
+        onClose={() => {
+          setShowNew(false);
+          setEditing(null);
+        }}
+        onCreated={load}
+        task={editing}
+      />
       <VoiceCapture open={showVoice} onClose={() => setShowVoice(false)} onCreated={load} />
     </div>
   );
