@@ -6,6 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
+import { sendEmail, emailTemplate } from '@/lib/email';
 import type { Client, TaskCategory, TaskPriority, TeamMember } from '@/types/app.types';
 
 const CATEGORIES: { value: TaskCategory; label: string }[] = [
@@ -85,7 +86,25 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId }: NewT
       toast(error.message, 'error');
       return;
     }
-    toast('Tarea creada', 'success');
+
+    // Si se asignó a un miembro con correo, notificarle por email.
+    const member = members.find((m) => m.id === memberId);
+    if (member?.email) {
+      const res = await sendEmail({
+        to: member.email,
+        subject: `Nueva tarea asignada: ${title.trim()}`,
+        html: emailTemplate({
+          title: 'Tienes una nueva tarea',
+          body: `<b>${title.trim()}</b><br/>${dueDate ? `Para el ${dueDate}.<br/>` : ''}${
+            description.trim() || ''
+          }`,
+          footer: 'Asignada desde DUO OS',
+        }),
+      });
+      toast(res.success ? `Tarea creada y ${member.name} notificado` : 'Tarea creada (no se pudo enviar el email)', res.success ? 'success' : 'info');
+    } else {
+      toast('Tarea creada', 'success');
+    }
     setTitle('');
     setDescription('');
     setDueDate('');
