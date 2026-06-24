@@ -108,6 +108,18 @@ La app envía correos a través de la Edge Function `send-email` (server-side). 
    > Para pruebas sin dominio, Resend permite enviar desde `onboarding@resend.dev` hacia el correo de tu propia cuenta. Si no defines `RESEND_FROM`, se usa ese por defecto.
 4. Prueba: en la app, **Perfil → Integraciones → Correo (Resend) → "Enviar prueba"**. Te debe llegar un correo a tu casilla.
 
+## 🤖 Automatizaciones — Bloque 4
+
+1. Corre la migración `supabase/migrations/004_automations.sql` en el SQL Editor (agrega el trigger de tareas automáticas al crear cliente + el campo `reminder_sent`).
+2. Despliega las funciones cron (requieren `RESEND_API_KEY` ya configurada):
+   ```bash
+   supabase functions deploy payment-reminder
+   supabase functions deploy task-reminder
+   ```
+3. Los horarios están en `supabase/config.toml` (pago: 9am diario; tareas: cada hora).
+
+> Las **tareas automáticas al crear un cliente** funcionan apenas corras la migración (es un trigger en la base, no necesita cron).
+
 ## 📱 Instalar como app en iPhone
 Abre la URL de Vercel en Safari → **Compartir → Añadir a pantalla de inicio**.
 

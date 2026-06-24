@@ -9,5 +9,14 @@ schedule = "0 8 * * *"   # 8am todos los días
 [functions.recurring-transactions]
 schedule = "0 0 1 * *"   # 1ro de cada mes
 
+[functions.payment-reminder]
+schedule = "0 9 * * *"   # 9am todos los días
+
+[functions.task-reminder]
+schedule = "0 * * * *"   # cada hora
+
 [functions.google-oauth-exchange]
 verify_jwt = false
+
+[functions.send-email]
+verify_jwt = true
