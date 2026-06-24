@@ -92,6 +92,22 @@ Los horarios de cron están en `supabase/config.toml`.
 
 ---
 
+## ✉️ Motor de email (Resend) — Bloque 2
+
+La app envía correos a través de la Edge Function `send-email` (server-side). La API key **nunca** va en el frontend.
+
+**Pasos (una sola vez):**
+1. Crea una cuenta en [Resend](https://resend.com) y genera una **API key**.
+2. (Recomendado) Verifica tu dominio en Resend agregando los registros DNS (en Namecheap).
+3. Guarda los secretos en Supabase:
+   ```bash
+   supabase secrets set RESEND_API_KEY=re_xxx
+   supabase secrets set RESEND_FROM="DUO OS <noreply@tudominio.com>"
+   supabase functions deploy send-email
+   ```
+   > Para pruebas sin dominio, Resend permite enviar desde `onboarding@resend.dev` hacia el correo de tu propia cuenta. Si no defines `RESEND_FROM`, se usa ese por defecto.
+4. Prueba: en la app, **Perfil → Integraciones → Correo (Resend) → "Enviar prueba"**. Te debe llegar un correo a tu casilla.
+
 ## 📱 Instalar como app en iPhone
 Abre la URL de Vercel en Safari → **Compartir → Añadir a pantalla de inicio**.
 

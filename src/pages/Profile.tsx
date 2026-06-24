@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IconBrandGoogle, IconLogout } from '@tabler/icons-react';
+import { IconBrandGoogle, IconLogout, IconMail } from '@tabler/icons-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
 import { TeamSection } from '@/components/settings/TeamSection';
+import { sendEmail, emailTemplate } from '@/lib/email';
 import { applyBrandColor, cn } from '@/lib/utils';
 
 const BRAND_COLORS = ['#7F77DD', '#FF2D55', '#34C759', '#007AFF', '#FF9500', '#AF52DE', '#FF3B30', '#5856D6'];
@@ -34,6 +35,7 @@ export function Profile() {
   const [aiFeatures, setAiFeatures] = useState<AIFeatures>({});
   const [calConnected, setCalConnected] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -69,6 +71,28 @@ export function Profile() {
     const next = { ...aiFeatures, [key]: value };
     setAiFeatures(next);
     await supabase.from('settings').update({ ai_features_enabled: next }).eq('user_id', user.id);
+  }
+
+  async function sendTestEmail() {
+    if (!user?.email) {
+      toast('No encuentro tu correo', 'error');
+      return;
+    }
+    setSendingTest(true);
+    const res = await sendEmail({
+      to: user.email,
+      subject: 'Prueba de correo — DUO OS',
+      html: emailTemplate({
+        title: '¡El motor de email funciona! 🎉',
+        body: 'Si recibiste este correo, tu integración con Resend está lista. Ya podemos enviar confirmaciones de tareas y recordatorios automáticos.',
+      }),
+    });
+    setSendingTest(false);
+    if (res.success) {
+      toast('Correo de prueba enviado. Revisa tu bandeja.', 'success');
+    } else {
+      toast(res.error ?? 'No se pudo enviar', 'error');
+    }
   }
 
   async function changeColor(hex: string) {
@@ -161,6 +185,16 @@ export function Profile() {
                 Conectar
               </Button>
             )}
+          </div>
+
+          <div className="flex items-center justify-between border-t border-ios-sep pt-3">
+            <div className="flex items-center gap-2">
+              <IconMail size={20} className="text-ios-text-2" />
+              <span className="text-sm text-ios-text">Correo (Resend)</span>
+            </div>
+            <Button size="sm" variant="secondary" loading={sendingTest} onClick={sendTestEmail}>
+              Enviar prueba
+            </Button>
           </div>
         </Card>
 
