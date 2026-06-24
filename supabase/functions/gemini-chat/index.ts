@@ -1,10 +1,12 @@
 // Edge Function: gemini-chat
-// Llama a Gemini desde el servidor. La GEMINI_API_KEY vive en Deno.env (NUNCA en el frontend).
-// El frontend la invoca con supabase.functions.invoke('gemini-chat', { body: {...} }).
+// Llama a Gemini desde el servidor (clave en Deno.env, nunca en el frontend).
+// Resiliente a saturación: reintenta el modelo principal y cae a uno alterno.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-const MODEL = 'gemini-3.5-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const PRIMARY = 'gemini-3.5-flash';
+const FALLBACK = 'gemini-3.1-flash-lite';
+const urlFor = (m: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,20 +14,21 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const json = (body: unknown, status = 200) =>
+  const json = (body: unknown) =>
     new Response(JSON.stringify(body), {
-      status,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   try {
     const { systemPrompt, userMessage, conversationHistory, expectJSON, temperature } = await req.json();
-
     const apiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!apiKey) return json({ error: 'GEMINI_API_KEY no está configurada en Supabase' });
+    if (!apiKey) return json({ error: 'GEMINI_API_KEY no configurada' });
 
     const contents = [
       { role: 'user', parts: [{ text: systemPrompt ?? '' }] },
@@ -34,35 +37,51 @@ serve(async (req) => {
       { role: 'user', parts: [{ text: userMessage ?? '' }] },
     ];
 
-    const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: temperature ?? 0.7,
-          maxOutputTokens: 1500,
-          ...(expectJSON && { responseMimeType: 'application/json' }),
-        },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-        ],
-      }),
-    });
+    const payload = {
+      contents,
+      generationConfig: {
+        temperature: temperature ?? 0.7,
+        maxOutputTokens: 1500,
+        ...(expectJSON && { responseMimeType: 'application/json' }),
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+      ],
+    };
 
-    const data = await res.json();
-    if (!res.ok || data.error) {
-      return json({ error: data?.error?.message ?? `HTTP ${res.status}` });
+    async function tryModel(model: string) {
+      const res = await fetch(`${urlFor(model)}?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      const msg: string = data?.error?.message ?? '';
+      const overloaded =
+        res.status === 503 ||
+        res.status === 429 ||
+        /overloaded|high demand|unavailable|try again/i.test(msg);
+      if (res.ok && !data.error) {
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        return { ok: Boolean(text), text, overloaded: false, error: text ? '' : 'sin texto' };
+      }
+      return { ok: false, text: '', overloaded, error: msg || `HTTP ${res.status}` };
     }
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    if (!text) {
-      const reason = data.candidates?.[0]?.finishReason ?? 'sin contenido';
-      return json({ error: `La IA no devolvió texto (motivo: ${reason})` });
+    // Reintenta el modelo principal hasta 3 veces ante saturación.
+    for (let i = 0; i < 3; i++) {
+      const r = await tryModel(PRIMARY);
+      if (r.ok) return json({ text: r.text });
+      if (!r.overloaded) return json({ error: r.error }); // error real: no insistir
+      await sleep(700 * (i + 1));
     }
 
-    return json({ text });
+    // Último intento con el modelo alterno (más capacidad).
+    const fb = await tryModel(FALLBACK);
+    if (fb.ok) return json({ text: fb.text });
+
+    return json({ error: 'La IA está saturada ahora mismo. Intenta de nuevo en unos segundos.' });
   } catch (e) {
     return json({ error: String(e) });
   }
