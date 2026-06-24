@@ -23,12 +23,12 @@ serve(async (req) => {
   try {
     const { to, subject, html } = await req.json();
     if (!to || !subject || !html) {
-      return json({ error: 'Faltan campos requeridos: to, subject, html' }, 400);
+      return json({ error: 'Faltan campos requeridos: to, subject, html' });
     }
 
     const apiKey = Deno.env.get('RESEND_API_KEY');
     if (!apiKey) {
-      return json({ error: 'RESEND_API_KEY no está configurada en Supabase' }, 500);
+      return json({ error: 'RESEND_API_KEY no está configurada en Supabase' });
     }
 
     // Debe ser un remitente de un dominio verificado en Resend.
@@ -51,11 +51,11 @@ serve(async (req) => {
 
     const data = await res.json();
     if (!res.ok) {
-      return json({ error: data?.message ?? 'Error al enviar el correo', details: data }, res.status);
+      return json({ error: data?.message ?? data?.name ?? 'Error al enviar el correo' });
     }
 
     return json({ success: true, id: data.id });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    return json({ error: String(e) });
   }
 });
