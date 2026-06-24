@@ -13,6 +13,9 @@ MRR (Monthly Recurring Revenue):
 Clientes activos ({{CLIENTS_COUNT}}):
 {{CLIENTS_LIST_JSON}}
 
+Equipo / responsables ({{TEAM_COUNT}}):
+{{TEAM_LIST_JSON}}
+
 Tareas vencidas ({{OVERDUE_COUNT}}):
 {{OVERDUE_TASKS_JSON}}
 
@@ -47,7 +50,10 @@ Eres el copiloto estratégico de un CEO que opera una agencia de marketing. Comb
 - Prioriza acciones que impacten el MRR si está debajo del objetivo
 
 === FORMATO DE RESPUESTA POR INTENT ===
-Si el usuario describe tareas para crear, devuelve SOLO un objeto JSON válido:
+Cuando el usuario PIDA ejecutar algo (crear/editar tareas o clientes, delegar), devuelve
+SOLO un objeto JSON válido (sin texto antes/después). El usuario confirmará antes de aplicarlo.
+
+1) Crear tareas:
 {
   "action": "create_tasks",
   "tasks": [
@@ -55,6 +61,8 @@ Si el usuario describe tareas para crear, devuelve SOLO un objeto JSON válido:
       "title": "string (max 80 chars)",
       "client_id": "uuid o null",
       "client_name": "string",
+      "assigned_member_id": "uuid del responsable o null",
+      "assigned_member_name": "string o null",
       "category": "strategy | content | ads | reports | design | meeting | admin | other",
       "priority": "high | medium | low",
       "due_date": "YYYY-MM-DD",
@@ -65,12 +73,36 @@ Si el usuario describe tareas para crear, devuelve SOLO un objeto JSON válido:
   "confirmation_message": "Detecté N tareas. ¿Las creo?"
 }
 
-Reglas para extracción:
-- Si menciona un cliente por nombre, busca el match en la lista de clientes activos y usa su id.
-- Si menciona "mañana", "viernes", etc., calcula la fecha real.
-- Si no especifica prioridad usa "medium", salvo "urgente" -> "high".
+2) Actualizar una tarea existente (usa el id de la lista de tareas del contexto):
+{
+  "action": "update_task",
+  "task_id": "uuid",
+  "changes": { "status": "done | pending | in_progress", "priority": "high|medium|low", "due_date": "YYYY-MM-DD", "title": "string" },
+  "confirmation_message": "Voy a actualizar esa tarea. ¿Confirmas?"
+}
 
-Para todo lo demás responde en texto plano natural en español, máximo 4 oraciones.
+3) Crear un cliente:
+{
+  "action": "create_client",
+  "client": { "name": "string", "industry": "string o null", "monthly_fee": 0, "status": "active", "contact_email": "string o null", "whatsapp": "string o null" },
+  "confirmation_message": "Voy a crear el cliente X. ¿Confirmas?"
+}
+
+4) Actualizar un cliente (usa el id de la lista de clientes del contexto):
+{
+  "action": "update_client",
+  "client_id": "uuid",
+  "changes": { "monthly_fee": 0, "status": "active|at_risk|paused|churned|proposal", "industry": "string", "name": "string" },
+  "confirmation_message": "Voy a actualizar el cliente. ¿Confirmas?"
+}
+
+Reglas para extracción:
+- Si menciona un cliente o un responsable por nombre, busca el match en las listas del contexto y usa su id.
+- Si menciona "mañana", "viernes", etc., calcula la fecha real (YYYY-MM-DD).
+- Si no especifica prioridad usa "medium", salvo "urgente" -> "high".
+- Solo incluye en "changes" los campos que el usuario realmente pidió cambiar.
+
+Para CONSULTAS o conversación (no ejecutar nada) responde en texto plano natural en español, máximo 4 oraciones.
 
 === NUNCA HAGAS ===
 - Inventar datos de clientes o números
@@ -85,7 +117,7 @@ export async function buildContextSnapshot(userId: string): Promise<ContextSnaps
   const nowISO = new Date().toISOString();
   const monthStart = new Date(new Date().setDate(1)).toISOString().split('T')[0];
 
-  const [profileRes, clientsRes, overdueRes, weekRes, eventsRes, txRes, insightsRes] =
+  const [profileRes, clientsRes, teamRes, overdueRes, weekRes, eventsRes, txRes, insightsRes] =
     await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase
@@ -93,6 +125,7 @@ export async function buildContextSnapshot(userId: string): Promise<ContextSnaps
         .select('id, name, industry, monthly_fee, status, last_contact_date')
         .eq('user_id', userId)
         .in('status', ['active', 'at_risk']),
+      supabase.from('team_members').select('id, name, email, role').eq('user_id', userId),
       supabase
         .from('tasks')
         .select('id, title, priority, due_date, client:clients(name)')
@@ -140,6 +173,8 @@ export async function buildContextSnapshot(userId: string): Promise<ContextSnaps
     MRR_GAP_PERCENT: mrr.gapPercent.toFixed(1),
     CLIENTS_COUNT: clientsRes.data?.length ?? 0,
     CLIENTS_LIST_JSON: JSON.stringify(clientsRes.data ?? []),
+    TEAM_COUNT: teamRes.data?.length ?? 0,
+    TEAM_LIST_JSON: JSON.stringify(teamRes.data ?? []),
     OVERDUE_COUNT: overdueRes.data?.length ?? 0,
     OVERDUE_TASKS_JSON: JSON.stringify(overdueRes.data ?? []),
     WEEK_TASKS_COUNT: weekRes.data?.length ?? 0,
