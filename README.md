@@ -37,8 +37,17 @@ Copia `.env.example` a `.env` y rellena:
 cp .env.example .env
 ```
 - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` → Supabase **Settings → API**
-- `VITE_GEMINI_API_KEY` → Google AI Studio
 - `VITE_GOOGLE_CLIENT_ID` / `VITE_GOOGLE_REDIRECT_URI` → Google Cloud Console (opcional, solo para Calendar)
+- **Gemini:** la clave NO va en el frontend. Se guarda como secreto `GEMINI_API_KEY` en Supabase (ver sección "IA segura" abajo).
+
+## 🔐 IA segura (Gemini server-side)
+
+Las llamadas a Gemini pasan por la Edge Function `gemini-chat`, así la clave nunca queda expuesta en el navegador.
+```bash
+supabase secrets set GEMINI_API_KEY=AIza...   # la misma clave de AI Studio
+supabase functions deploy gemini-chat
+```
+> Tras esto, **elimina** `VITE_GEMINI_API_KEY` de Vercel (ya no se usa).
 
 ### 5. Correr en local
 ```bash

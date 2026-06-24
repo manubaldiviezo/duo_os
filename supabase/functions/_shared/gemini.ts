@@ -1,6 +1,6 @@
 // Helper compartido para llamar a Gemini desde Edge Functions (Deno, server-side).
 const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
 
 export async function callGeminiServer(systemPrompt: string, userMessage: string): Promise<any> {
   const apiKey = Deno.env.get('GEMINI_API_KEY');
