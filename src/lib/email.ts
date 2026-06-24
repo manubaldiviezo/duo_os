@@ -12,7 +12,20 @@ export interface SendEmailParams {
  */
 export async function sendEmail(params: SendEmailParams): Promise<{ success: boolean; error?: string }> {
   const { data, error } = await supabase.functions.invoke('send-email', { body: params });
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    // Cuando la función responde con un status de error, el cuerpo real viene en error.context.
+    let detail = error.message;
+    try {
+      const ctx = (error as any).context;
+      if (ctx && typeof ctx.json === 'function') {
+        const body = await ctx.json();
+        if (body?.error) detail = String(body.error);
+      }
+    } catch {
+      /* sin cuerpo legible */
+    }
+    return { success: false, error: detail };
+  }
   if (data?.error) return { success: false, error: String(data.error) };
   return { success: true };
 }
