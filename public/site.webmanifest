@@ -1,6 +1,6 @@
 {
-  "name": "DUO OS",
-  "short_name": "DUO OS",
+  "name": "DUO Community",
+  "short_name": "DUO",
   "description": "Sistema operativo con IA para agencias de marketing.",
   "start_url": "/",
   "scope": "/",
