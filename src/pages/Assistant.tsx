@@ -40,6 +40,7 @@ interface SessionRow {
 }
 
 const SUGGESTIONS = [
+  '🚀 Configurar mi agencia paso a paso',
   '¿Qué hago primero hoy?',
   'Crea una tarea: llamar a Femmeninas mañana',
   '¿Cómo cierro el gap de MRR?',

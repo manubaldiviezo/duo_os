@@ -7,7 +7,7 @@ export interface AIAction {
   [key: string]: any;
 }
 
-const KNOWN_ACTIONS = ['create_tasks', 'update_task', 'create_client', 'update_client'];
+const KNOWN_ACTIONS = ['create_tasks', 'update_task', 'create_client', 'create_clients', 'update_client'];
 
 /** Intenta extraer una acción JSON del texto crudo de Gemini. Devuelve null si no es una acción. */
 export function parseAction(raw: string): AIAction | null {
@@ -52,6 +52,13 @@ export function describeAction(a: AIAction): { title: string; lines: string[] } 
         lines: [c.industry && `• Industria: ${c.industry}`, c.monthly_fee && `• Fee: $${c.monthly_fee}/mes`].filter(
           Boolean
         ) as string[],
+      };
+    }
+    case 'create_clients': {
+      const clients = Array.isArray(a.clients) ? a.clients : [];
+      return {
+        title: `Crear ${clients.length} cliente(s)`,
+        lines: clients.map((c: any) => `• ${c.name}${c.monthly_fee ? ` ($${c.monthly_fee}/mes)` : ''}`),
       };
     }
     case 'update_client': {
@@ -137,6 +144,27 @@ export async function executeAction(
       });
       if (error) return `No pude crear el cliente: ${error.message}`;
       return `Cliente "${c.name}" creado.`;
+    }
+
+    case 'create_clients': {
+      const clients = Array.isArray(a.clients) ? a.clients : [];
+      const rows = clients
+        .filter((c: any) => c?.name)
+        .map((c: any) => ({
+          user_id: ctx.userId,
+          name: c.name,
+          industry: c.industry ?? c.service_type ?? null,
+          monthly_fee: Number(c.monthly_fee) || 0,
+          status: c.status ?? 'active',
+          services: Array.isArray(c.services) ? c.services : c.service_type ? [c.service_type] : [],
+          contact_email: c.contact_email ?? null,
+          whatsapp: c.whatsapp ?? null,
+          notes: c.notes ?? null,
+        }));
+      if (rows.length === 0) return 'No recibí clientes válidos.';
+      const { error } = await supabase.from('clients').insert(rows);
+      if (error) return `No pude crear los clientes: ${error.message}`;
+      return `Creé ${rows.length} cliente(s). Sus tareas del mes se generaron automáticamente.`;
     }
 
     case 'update_client': {
