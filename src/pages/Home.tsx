@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   IconCalendarEvent,
   IconAlertTriangle,
@@ -6,6 +7,7 @@ import {
   IconChecklist,
   IconEye,
   IconEyeOff,
+  IconBulb,
 } from '@tabler/icons-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
@@ -30,6 +32,7 @@ const FILTERS: { value: Filter; label: string }[] = [
 
 export function Home() {
   const { user, profile } = useAuthStore();
+  const navigate = useNavigate();
   const [mrr, setMrr] = useState<MRRResult | null>(null);
   const [flowTasks, setFlowTasks] = useState<Task[]>([]);
   const [overdueCount, setOverdueCount] = useState(0);
@@ -162,13 +165,22 @@ export function Home() {
         title={profile?.user_name ?? 'Inicio'}
         subtitle={greeting()}
         right={
-          <button
-            onClick={toggleMoney}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-ios-card text-ios-text-2"
-            aria-label={showMoney ? 'Ocultar finanzas' : 'Mostrar finanzas'}
-          >
-            {showMoney ? <IconEyeOff size={20} /> : <IconEye size={20} />}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate('/ideas')}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-ios-card text-ios-text-2"
+              aria-label="Ideas"
+            >
+              <IconBulb size={20} />
+            </button>
+            <button
+              onClick={toggleMoney}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-ios-card text-ios-text-2"
+              aria-label={showMoney ? 'Ocultar finanzas' : 'Mostrar finanzas'}
+            >
+              {showMoney ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+            </button>
+          </div>
         }
       />
 

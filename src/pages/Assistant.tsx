@@ -9,9 +9,11 @@ import {
   IconCheck,
   IconX,
 } from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
+import { PLANS, isFreeExpired, type Plan } from '@/lib/plans';
 import { callGemini, type GeminiHistoryItem } from '@/lib/gemini';
 import { buildSystemPrompt } from '@/lib/buildPrompt';
 import { parseAction, describeAction, executeAction, type AIAction } from '@/lib/aiActions';
@@ -48,8 +50,10 @@ const SUGGESTIONS = [
 ];
 
 export function Assistant() {
-  const user = useAuthStore((s) => s.user);
+  const { user, profile } = useAuthStore();
+  const navigate = useNavigate();
   const toast = useUIStore((s) => s.toast);
+  const [usage, setUsage] = useState(0);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
@@ -74,6 +78,14 @@ export function Assistant() {
       .then(({ data }) => setMembers((data as TeamMember[]) ?? []));
   }, [user]);
 
+  // Uso de IA del mes (con reseteo mensual).
+  useEffect(() => {
+    const reset = profile?.ai_messages_reset;
+    const month = new Date().toISOString().slice(0, 7);
+    const sameMonth = reset ? reset.slice(0, 7) === month : false;
+    setUsage(sameMonth ? profile?.ai_messages_month ?? 0 : 0);
+  }, [profile?.ai_messages_month, profile?.ai_messages_reset]);
+
   // La voz va llenando la caja de texto.
   useEffect(() => {
     if (isRecording) setInput(transcript);
@@ -89,6 +101,17 @@ export function Assistant() {
         .select('id')
         .single();
       if (data?.id) setConversationId(data.id);
+
+      // Limitar chats guardados según el plan (borra los más viejos).
+      const cap = PLANS[(profile?.plan ?? 'free') as Plan].savedChats;
+      const { data: all } = await supabase
+        .from('ai_conversations')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+      if (all && all.length > cap) {
+        await supabase.from('ai_conversations').delete().in('id', all.slice(cap).map((r: any) => r.id));
+      }
     } else {
       await supabase.from('ai_conversations').update({ messages: msgs }).eq('id', conversationId);
     }
@@ -96,6 +119,22 @@ export function Assistant() {
 
   async function send(text: string) {
     if (!text.trim() || !user || thinking) return;
+
+    // Límites por plan
+    const plan = (profile?.plan ?? 'free') as Plan;
+    if (isFreeExpired(plan, profile?.plan_started_at)) {
+      toast('Tu prueba gratis de 21 días terminó. Mejora tu plan para seguir usando la IA.', 'info');
+      navigate('/planes');
+      return;
+    }
+    if (usage >= PLANS[plan].aiMessagesPerMonth) {
+      toast('Alcanzaste el límite de mensajes de IA de tu plan.', 'info');
+      navigate('/planes');
+      return;
+    }
+    setUsage((u) => u + 1);
+    void supabase.rpc('bump_ai_usage');
+
     if (isRecording) stop();
     const base: Msg[] = [...messages, { role: 'user', text }];
     setMessages(base);

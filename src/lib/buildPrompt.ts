@@ -31,6 +31,9 @@ Finanzas del mes en curso:
 - Gastos: \${{EXPENSES}}
 - Margen actual: \${{MARGIN}} ({{MARGIN_PERCENT}}%)
 
+Cobros pendientes (para marcar como recibidos):
+{{PENDING_TX_JSON}}
+
 Alertas IA activas ({{INSIGHTS_COUNT}}):
 {{INSIGHTS_JSON}}
 
@@ -105,7 +108,24 @@ SOLO un objeto JSON válido (sin texto antes/después). El usuario confirmará a
   "confirmation_message": "Voy a actualizar el cliente. ¿Confirmas?"
 }
 
+5) Registrar una transacción en finanzas:
+{
+  "action": "add_transaction",
+  "transaction": { "type": "income | expense | pending_income", "amount": 0, "description": "string", "client_name": "string o null", "date": "YYYY-MM-DD opcional" },
+  "confirmation_message": "Voy a registrar esta transacción. ¿Confirmas?"
+}
+
+6) Marcar un cobro pendiente como recibido (usa transaction_id de la lista de cobros pendientes, o client_id):
+{
+  "action": "mark_payment_paid",
+  "transaction_id": "uuid o null",
+  "client_id": "uuid o null",
+  "client_name": "string",
+  "confirmation_message": "Voy a marcar ese cobro como recibido. ¿Confirmas?"
+}
+
 Reglas para extracción:
+- Si el usuario pide un "reporte de hoy", "briefing", o "tareas de la semana", respóndele en TEXTO (no es una acción) usando los datos del contexto: prioridades, vencidas, reuniones, cobros y MRR.
 - Si menciona un cliente o un responsable por nombre, busca el match en las listas del contexto y usa su id.
 - Si menciona "mañana", "viernes", etc., calcula la fecha real (YYYY-MM-DD).
 - Si no especifica prioridad usa "medium", salvo "urgente" -> "high".
@@ -142,7 +162,7 @@ export async function buildContextSnapshot(userId: string): Promise<ContextSnaps
   const nowISO = new Date().toISOString();
   const monthStart = new Date(new Date().setDate(1)).toISOString().split('T')[0];
 
-  const [profileRes, clientsRes, teamRes, overdueRes, weekRes, eventsRes, txRes, insightsRes] =
+  const [profileRes, clientsRes, teamRes, overdueRes, weekRes, eventsRes, txRes, insightsRes, pendingTxRes] =
     await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase
@@ -172,6 +192,11 @@ export async function buildContextSnapshot(userId: string): Promise<ContextSnaps
         .lte('start_time', inDays(7)),
       supabase.from('transactions').select('type, amount').eq('user_id', userId).gte('date', monthStart),
       supabase.from('ai_insights').select('type, title, severity').eq('user_id', userId).eq('acknowledged', false),
+      supabase
+        .from('transactions')
+        .select('id, amount, description, client:clients(name)')
+        .eq('user_id', userId)
+        .eq('type', 'pending_income'),
     ]);
 
   const profile = profileRes.data;
@@ -212,6 +237,7 @@ export async function buildContextSnapshot(userId: string): Promise<ContextSnaps
     MARGIN_PERCENT: incomeReceived > 0 ? ((margin / incomeReceived) * 100).toFixed(1) : '0',
     INSIGHTS_COUNT: insightsRes.data?.length ?? 0,
     INSIGHTS_JSON: JSON.stringify(insightsRes.data ?? []),
+    PENDING_TX_JSON: JSON.stringify(pendingTxRes.data ?? []),
   };
 }
 

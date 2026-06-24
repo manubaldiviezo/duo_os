@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   IconBrandGoogle,
   IconLogout,
   IconMail,
   IconCalendarTime,
   IconUpload,
+  IconCrown,
+  IconChevronRight,
 } from '@tabler/icons-react';
 import { supabase } from '@/lib/supabase';
+import { PLANS, type Plan } from '@/lib/plans';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { signOut } from '@/hooks/useAuth';
@@ -41,7 +45,9 @@ const AI_LABELS: Record<string, string> = {
 
 export function Profile() {
   const { user, profile, setProfile } = useAuthStore();
+  const navigate = useNavigate();
   const toast = useUIStore((s) => s.toast);
+  const currentPlan = (profile?.plan ?? 'free') as Plan;
   const [agencyName, setAgencyName] = useState(profile?.agency_name ?? '');
   const [mrrGoal, setMrrGoal] = useState(String(profile?.mrr_goal ?? 3000));
   const [aiFeatures, setAiFeatures] = useState<AIFeatures>({});
@@ -154,6 +160,19 @@ export function Profile() {
       <TopBar title="Perfil" subtitle={profile?.agency_name} />
 
       <div className="space-y-5 px-5 pt-2">
+        <Card onClick={() => navigate('/planes')} className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-l">
+              <IconCrown size={20} className="text-brand" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-ios-text">Plan {PLANS[currentPlan].name}</p>
+              <p className="text-xs text-ios-text-3">Ver planes y mejorar</p>
+            </div>
+          </div>
+          <IconChevronRight size={20} className="text-ios-text-3" />
+        </Card>
+
         <Card className="space-y-3">
           <h2 className="text-sm font-semibold text-ios-text-2">Agencia</h2>
           <Input label="Nombre de la agencia" value={agencyName} onChange={(e) => setAgencyName(e.target.value)} />

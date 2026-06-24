@@ -7,7 +7,15 @@ export interface AIAction {
   [key: string]: any;
 }
 
-const KNOWN_ACTIONS = ['create_tasks', 'update_task', 'create_client', 'create_clients', 'update_client'];
+const KNOWN_ACTIONS = [
+  'create_tasks',
+  'update_task',
+  'create_client',
+  'create_clients',
+  'update_client',
+  'add_transaction',
+  'mark_payment_paid',
+];
 
 /** Intenta extraer una acción JSON del texto crudo de Gemini. Devuelve null si no es una acción. */
 export function parseAction(raw: string): AIAction | null {
@@ -66,6 +74,20 @@ export function describeAction(a: AIAction): { title: string; lines: string[] } 
       return {
         title: 'Actualizar un cliente',
         lines: Object.entries(changes).map(([k, v]) => `• ${k}: ${v}`),
+      };
+    }
+    case 'add_transaction': {
+      const t = a.transaction ?? a;
+      const tipo = t.type === 'expense' ? 'gasto' : t.type === 'pending_income' ? 'cobro pendiente' : 'ingreso';
+      return {
+        title: `Registrar ${tipo}`,
+        lines: [t.description && `• ${t.description}`, t.amount && `• $${t.amount}`].filter(Boolean) as string[],
+      };
+    }
+    case 'mark_payment_paid': {
+      return {
+        title: 'Marcar cobro como recibido',
+        lines: [a.client_name && `• ${a.client_name}`].filter(Boolean) as string[],
       };
     }
     default:
@@ -178,6 +200,46 @@ export async function executeAction(
         .eq('user_id', ctx.userId);
       if (error) return `No pude actualizar el cliente: ${error.message}`;
       return 'Cliente actualizado.';
+    }
+
+    case 'add_transaction': {
+      const t = a.transaction ?? a;
+      if (!t.amount || !t.description) return 'Falta el monto o la descripción.';
+      let client_id = t.client_id ?? null;
+      if (!client_id && t.client_name) {
+        const { data } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('user_id', ctx.userId)
+          .ilike('name', t.client_name)
+          .limit(1)
+          .maybeSingle();
+        client_id = data?.id ?? null;
+      }
+      const { error } = await supabase.from('transactions').insert({
+        user_id: ctx.userId,
+        type: t.type ?? 'income',
+        amount: Number(t.amount),
+        description: t.description,
+        client_id,
+        date: t.date ? new Date(t.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      });
+      if (error) return `No pude registrar la transacción: ${error.message}`;
+      return 'Transacción registrada en Finanzas.';
+    }
+
+    case 'mark_payment_paid': {
+      let q = supabase
+        .from('transactions')
+        .update({ type: 'income', date: new Date().toISOString().split('T')[0] })
+        .eq('user_id', ctx.userId)
+        .eq('type', 'pending_income');
+      if (a.transaction_id) q = q.eq('id', a.transaction_id);
+      else if (a.client_id) q = q.eq('client_id', a.client_id);
+      else return 'No identifiqué qué cobro marcar como recibido.';
+      const { error } = await q;
+      if (error) return `No pude actualizar el cobro: ${error.message}`;
+      return 'Cobro marcado como recibido. ✅';
     }
 
     default:

@@ -18,6 +18,8 @@ import { Clients } from '@/pages/Clients';
 import { ClientDetail } from '@/pages/ClientDetail';
 import { Finance } from '@/pages/Finance';
 import { Profile } from '@/pages/Profile';
+import { Plans } from '@/pages/Plans';
+import { Ideas } from '@/pages/Ideas';
 
 function FullScreenLoader() {
   return (
@@ -71,6 +73,8 @@ export default function App() {
               <Route path="/clientes" element={<Clients />} />
               <Route path="/clientes/:id" element={<ClientDetail />} />
               <Route path="/finanzas" element={<Finance />} />
+              <Route path="/ideas" element={<Ideas />} />
+              <Route path="/planes" element={<Plans />} />
               <Route path="/perfil" element={<Profile />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

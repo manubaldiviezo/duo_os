@@ -37,8 +37,20 @@ export interface Profile {
   currency: string;
   mrr_goal: number;
   onboarding_completed: boolean;
+  plan: string | null;
+  plan_started_at: string | null;
+  ai_messages_month: number | null;
+  ai_messages_reset: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Idea {
+  id: string;
+  user_id: string;
+  content: string;
+  type: string;
+  created_at: string;
 }
 
 export interface Client {
