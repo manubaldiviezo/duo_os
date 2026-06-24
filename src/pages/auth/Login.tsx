@@ -33,7 +33,7 @@ export function Login() {
           <div className="mx-auto mb-3 flex justify-center">
             <Logo size={76} />
           </div>
-          <h1 className="text-2xl font-bold text-ios-text">DUO OS</h1>
+          <h1 className="text-2xl font-bold text-ios-text">DUO Community</h1>
           <p className="mt-1 text-sm text-ios-text-3">El sistema operativo de tu agencia</p>
         </div>
 

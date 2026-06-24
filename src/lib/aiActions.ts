@@ -133,7 +133,7 @@ export async function executeAction(
               body: `<b>${t.title}</b><br/>${t.due_date ? `Para el ${t.due_date}.<br/>` : ''}${
                 t.description ?? ''
               }`,
-              footer: 'Asignada desde DUO OS',
+              footer: 'Asignada desde DUO Community',
             }),
           });
           if (res.success) notified++;

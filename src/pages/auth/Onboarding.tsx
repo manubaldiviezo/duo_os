@@ -70,7 +70,7 @@ export function Onboarding() {
     const { data: fresh } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     setProfile(fresh ?? null);
     setLoading(false);
-    toast('¡Todo listo! Bienvenido a DUO OS', 'success');
+    toast('¡Todo listo! Bienvenido a DUO Community', 'success');
   }
 
   return (
@@ -136,7 +136,7 @@ export function Onboarding() {
               “Configurar mi agencia” y el asistente te ayuda a cargar tus clientes y tareas.
             </p>
             <Button size="lg" className="w-full" loading={loading} onClick={() => finish(false)}>
-              Entrar a DUO OS
+              Entrar a DUO Community
             </Button>
           </div>
         )}

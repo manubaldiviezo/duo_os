@@ -62,7 +62,7 @@ export function cyclePrice(monthly: number, cycle: Cycle): number {
 
 export function buyUrl(planName: string, cycle: Cycle): string {
   const price = '';
-  const msg = `Hola! Quiero contratar el plan ${planName} (${cycle.label}) de DUO OS.${price}`;
+  const msg = `Hola! Quiero contratar el plan ${planName} (${cycle.label}) de DUO Community.${price}`;
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
 }
 

@@ -113,7 +113,7 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
         html: emailTemplate({
           title: 'Tienes una tarea asignada',
           body: `<b>${title.trim()}</b><br/>${dueDate ? `Para el ${dueDate}.<br/>` : ''}${description.trim() || ''}`,
-          footer: 'Asignada desde DUO OS',
+          footer: 'Asignada desde DUO Community',
         }),
       });
       toast(

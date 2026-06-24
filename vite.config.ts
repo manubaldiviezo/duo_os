@@ -15,9 +15,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'DUO OS',
+        name: 'DUO Community',
         short_name: 'DUO',
-        description: 'Sistema operativo para agencias de marketing',
+        description: 'El sistema operativo para agencias de marketing',
         theme_color: '#F2741B',
         background_color: '#000000',
         display: 'standalone',

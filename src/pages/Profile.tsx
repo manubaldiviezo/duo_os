@@ -101,7 +101,7 @@ export function Profile() {
     setSendingTest(true);
     const res = await sendEmail({
       to: user.email,
-      subject: 'Prueba de correo — DUO OS',
+      subject: 'Prueba de correo — DUO Community',
       html: emailTemplate({
         title: '¡El motor de email funciona! 🎉',
         body: 'Si recibiste este correo, tu integración con Resend está lista. Ya podemos enviar confirmaciones de tareas y recordatorios automáticos.',
@@ -358,7 +358,7 @@ export function Profile() {
         </Button>
 
         <div className="pb-4 pt-2 text-center text-[11px] leading-relaxed text-ios-text-3">
-          <p>DUO OS · v0.1.0</p>
+          <p>DUO Community · v0.1.0</p>
           <p>© {new Date().getFullYear()} DUO · Agencia de Marketing · Bolivia</p>
           <p>Desarrollado por Emanuel Baldiviezo</p>
         </div>
