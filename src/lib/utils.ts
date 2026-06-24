@@ -98,3 +98,27 @@ export function applyBrandColor(hex?: string | null): void {
   root.style.setProperty('--brand-d', shadeColor(hex, -0.25));
   root.style.setProperty('--brand-l', shadeColor(hex, 0.85));
 }
+
+export const FONT_STACKS: Record<string, string> = {
+  system: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif",
+  inter: "'Inter', sans-serif",
+  poppins: "'Poppins', sans-serif",
+  montserrat: "'Montserrat', sans-serif",
+};
+
+/** Aplica color primario, secundario y tipografía del perfil a toda la app. */
+export function applyTheme(opts: {
+  brand_color?: string | null;
+  brand_color_secondary?: string | null;
+  font_family?: string | null;
+}): void {
+  const root = document.documentElement;
+  const c = opts.brand_color;
+  // El morado original (#7F77DD) se trata como "sin elegir" -> naranja de marca.
+  const brand = !c || c.toLowerCase() === '#7f77dd' ? '#F2741B' : c;
+  root.style.setProperty('--brand', brand);
+  root.style.setProperty('--brand-d', shadeColor(brand, -0.25));
+  root.style.setProperty('--brand-l', shadeColor(brand, 0.85));
+  if (opts.brand_color_secondary) root.style.setProperty('--brand-2', opts.brand_color_secondary);
+  root.style.setProperty('--font-sans', FONT_STACKS[opts.font_family ?? 'system'] ?? FONT_STACKS.system);
+}

@@ -6,6 +6,8 @@
   --brand: #f2741b;
   --brand-d: #c75a11;
   --brand-l: #fcead9;
+  --brand-2: #ffb037;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
   --ios-bg: #f2f2f7;
   --ios-card: #ffffff;
   --ios-text: #000000;
@@ -39,7 +41,7 @@ body,
 body {
   background: var(--ios-bg);
   color: var(--ios-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   padding-bottom: env(safe-area-inset-bottom);
 }

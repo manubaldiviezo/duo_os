@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuthListener } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
-import { applyBrandColor } from '@/lib/utils';
+import { applyTheme } from '@/lib/utils';
 import { AppShell } from '@/components/layout/AppShell';
 import { ToastContainer } from '@/components/ui/Toast';
 import { LoadingDots } from '@/components/ui/LoadingDots';
@@ -31,13 +31,14 @@ export default function App() {
   useAuthListener();
   const { session, profile, loading } = useAuthStore();
 
-  // Aplica el color de marca del perfil a toda la app cuando carga/cambia.
-  // El morado original (#7F77DD) se trata como "sin elegir" -> naranja de marca.
+  // Aplica el tema (color primario, secundario y tipografía) del perfil a toda la app.
   useEffect(() => {
-    const c = profile?.brand_color;
-    const effective = !c || c.toLowerCase() === '#7f77dd' ? '#F2741B' : c;
-    applyBrandColor(effective);
-  }, [profile?.brand_color]);
+    applyTheme({
+      brand_color: profile?.brand_color,
+      brand_color_secondary: profile?.brand_color_secondary,
+      font_family: profile?.font_family,
+    });
+  }, [profile?.brand_color, profile?.brand_color_secondary, profile?.font_family]);
 
   if (loading) return <FullScreenLoader />;
 

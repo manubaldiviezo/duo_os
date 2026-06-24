@@ -130,21 +130,13 @@ export function Onboarding() {
 
         {step === 2 && (
           <div className="space-y-4">
-            <h1 className="text-2xl font-bold text-ios-text">¿Cómo empezamos?</h1>
+            <h1 className="text-2xl font-bold text-ios-text">¡Todo listo!</h1>
             <p className="text-sm text-ios-text-3">
-              Puedes cargar datos demo (los 9 clientes reales de la cartera) o empezar desde cero.
+              Tu espacio arranca limpio. Después, desde la pestaña <b>IA</b> puedes tocar
+              “Configurar mi agencia” y el asistente te ayuda a cargar tus clientes y tareas.
             </p>
-            <Button size="lg" className="w-full" loading={loading} onClick={() => finish(true)}>
-              Cargar datos demo
-            </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              className="w-full"
-              loading={loading}
-              onClick={() => finish(false)}
-            >
-              Empezar desde cero
+            <Button size="lg" className="w-full" loading={loading} onClick={() => finish(false)}>
+              Entrar a DUO OS
             </Button>
           </div>
         )}

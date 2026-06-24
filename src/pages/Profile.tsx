@@ -1,5 +1,11 @@
-import { useEffect, useState } from 'react';
-import { IconBrandGoogle, IconLogout, IconMail } from '@tabler/icons-react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  IconBrandGoogle,
+  IconLogout,
+  IconMail,
+  IconCalendarTime,
+  IconUpload,
+} from '@tabler/icons-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -12,9 +18,15 @@ import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
 import { TeamSection } from '@/components/settings/TeamSection';
 import { sendEmail, emailTemplate } from '@/lib/email';
-import { applyBrandColor, cn } from '@/lib/utils';
+import { applyBrandColor, FONT_STACKS, cn } from '@/lib/utils';
 
 const BRAND_COLORS = ['#F2741B', '#FF2D55', '#34C759', '#007AFF', '#AF52DE', '#FF3B30', '#5856D6', '#FFCC00'];
+const FONTS = [
+  { key: 'system', label: 'Sistema' },
+  { key: 'inter', label: 'Inter' },
+  { key: 'poppins', label: 'Poppins' },
+  { key: 'montserrat', label: 'Montserrat' },
+];
 
 type AIFeatures = Record<string, boolean>;
 
@@ -36,6 +48,8 @@ export function Profile() {
   const [calConnected, setCalConnected] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -100,7 +114,39 @@ export function Profile() {
     applyBrandColor(hex); // cambio inmediato en pantalla
     if (profile) setProfile({ ...profile, brand_color: hex });
     await supabase.from('profiles').update({ brand_color: hex }).eq('id', user.id);
-    toast('Color actualizado', 'success');
+  }
+
+  async function changeSecondary(hex: string) {
+    if (!user) return;
+    document.documentElement.style.setProperty('--brand-2', hex);
+    if (profile) setProfile({ ...profile, brand_color_secondary: hex });
+    await supabase.from('profiles').update({ brand_color_secondary: hex }).eq('id', user.id);
+  }
+
+  async function changeFont(key: string) {
+    if (!user) return;
+    document.documentElement.style.setProperty('--font-sans', FONT_STACKS[key] ?? FONT_STACKS.system);
+    if (profile) setProfile({ ...profile, font_family: key });
+    await supabase.from('profiles').update({ font_family: key }).eq('id', user.id);
+  }
+
+  async function uploadLogo(file: File) {
+    if (!user) return;
+    setUploadingLogo(true);
+    const ext = (file.name.split('.').pop() ?? 'png').toLowerCase();
+    const path = `${user.id}/logo.${ext}`;
+    const { error: upErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+    if (upErr) {
+      setUploadingLogo(false);
+      toast('No se pudo subir. ¿Creaste el bucket público "logos" en Supabase?', 'error');
+      return;
+    }
+    const { data } = supabase.storage.from('logos').getPublicUrl(path);
+    const url = `${data.publicUrl}?t=${Date.now()}`;
+    await supabase.from('profiles').update({ logo_url: url }).eq('id', user.id);
+    if (profile) setProfile({ ...profile, logo_url: url });
+    setUploadingLogo(false);
+    toast('Logo actualizado', 'success');
   }
 
   return (
@@ -122,38 +168,106 @@ export function Profile() {
           </Button>
         </Card>
 
-        <Card className="space-y-3">
-          <h2 className="text-sm font-semibold text-ios-text-2">Color de marca</h2>
-          <div className="flex flex-wrap gap-3">
-            {BRAND_COLORS.map((c) => (
-              <button
-                key={c}
-                onClick={() => changeColor(c)}
-                className={cn(
-                  'h-10 w-10 rounded-full transition-transform active:scale-90',
-                  profile?.brand_color?.toLowerCase() === c.toLowerCase() &&
-                    'ring-2 ring-offset-2 ring-offset-ios-card'
-                )}
-                style={{
-                  backgroundColor: c,
-                  boxShadow:
-                    profile?.brand_color?.toLowerCase() === c.toLowerCase() ? `0 0 0 3px ${c}` : undefined,
-                }}
-                aria-label={`Color ${c}`}
-              />
-            ))}
-            <label
-              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-ios-text-3 text-xs text-ios-text-3"
-              title="Color personalizado"
-            >
-              +
+        <Card className="space-y-4">
+          <h2 className="text-sm font-semibold text-ios-text-2">Apariencia</h2>
+
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-ios-bg">
+              {profile?.logo_url ? (
+                <img src={profile.logo_url} alt="Logo" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-xs text-ios-text-3">Logo</span>
+              )}
+            </div>
+            <div>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={uploadingLogo}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                <span className="flex items-center gap-1">
+                  <IconUpload size={16} /> Subir logo
+                </span>
+              </Button>
               <input
-                type="color"
-                className="sr-only"
-                value={profile?.brand_color ?? '#7F77DD'}
-                onChange={(e) => changeColor(e.target.value)}
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadLogo(f);
+                }}
               />
-            </label>
+            </div>
+          </div>
+
+          {/* Color primario */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-ios-text-2">Color principal</p>
+            <div className="flex flex-wrap gap-2.5">
+              {BRAND_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => changeColor(c)}
+                  className={cn(
+                    'h-9 w-9 rounded-full transition-transform active:scale-90',
+                    profile?.brand_color?.toLowerCase() === c.toLowerCase() && 'ring-2 ring-offset-2 ring-offset-ios-card'
+                  )}
+                  style={{ backgroundColor: c }}
+                  aria-label={`Color ${c}`}
+                />
+              ))}
+              <label className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-ios-text-3 text-xs text-ios-text-3">
+                +
+                <input type="color" className="sr-only" value={profile?.brand_color ?? '#F2741B'} onChange={(e) => changeColor(e.target.value)} />
+              </label>
+            </div>
+          </div>
+
+          {/* Color secundario (acento) */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-ios-text-2">Color secundario (acento)</p>
+            <div className="flex flex-wrap gap-2.5">
+              {BRAND_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => changeSecondary(c)}
+                  className={cn(
+                    'h-9 w-9 rounded-full transition-transform active:scale-90',
+                    profile?.brand_color_secondary?.toLowerCase() === c.toLowerCase() && 'ring-2 ring-offset-2 ring-offset-ios-card'
+                  )}
+                  style={{ backgroundColor: c }}
+                  aria-label={`Acento ${c}`}
+                />
+              ))}
+              <label className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-ios-text-3 text-xs text-ios-text-3">
+                +
+                <input type="color" className="sr-only" value={profile?.brand_color_secondary ?? '#FFB037'} onChange={(e) => changeSecondary(e.target.value)} />
+              </label>
+            </div>
+          </div>
+
+          {/* Tipografía */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-ios-text-2">Tipografía</p>
+            <div className="grid grid-cols-2 gap-2">
+              {FONTS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => changeFont(f.key)}
+                  style={{ fontFamily: FONT_STACKS[f.key] }}
+                  className={cn(
+                    'rounded-xl px-3 py-2.5 text-sm transition-colors',
+                    (profile?.font_family ?? 'system') === f.key ? 'bg-brand text-white' : 'bg-ios-bg text-ios-text'
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
         </Card>
 
@@ -171,12 +285,16 @@ export function Profile() {
           ))}
         </Card>
 
-        <Card className="space-y-3">
-          <h2 className="text-sm font-semibold text-ios-text-2">Integraciones</h2>
-          <div className="flex items-center justify-between">
+        <Card className="space-y-1">
+          <h2 className="mb-2 text-sm font-semibold text-ios-text-2">Integraciones</h2>
+
+          <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
               <IconBrandGoogle size={20} className="text-ios-text-2" />
-              <span className="text-sm text-ios-text">Google Calendar</span>
+              <div>
+                <span className="block text-sm text-ios-text">Google Calendar</span>
+                <span className="text-[11px] text-ios-text-3">Agenda y reuniones</span>
+              </div>
             </div>
             {calConnected ? (
               <span className="text-sm font-medium text-ios-green">Conectado</span>
@@ -187,13 +305,29 @@ export function Profile() {
             )}
           </div>
 
-          <div className="flex items-center justify-between border-t border-ios-sep pt-3">
+          <div className="flex items-center justify-between border-t border-ios-sep py-2">
+            <div className="flex items-center gap-2">
+              <IconCalendarTime size={20} className="text-ios-text-2" />
+              <div>
+                <span className="block text-sm text-ios-text">Calendly</span>
+                <span className="text-[11px] text-ios-text-3">Reservas de reuniones</span>
+              </div>
+            </div>
+            <span className="rounded-full bg-ios-text-3/15 px-2.5 py-0.5 text-[11px] font-medium text-ios-text-3">
+              Próximamente
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-ios-sep py-2">
             <div className="flex items-center gap-2">
               <IconMail size={20} className="text-ios-text-2" />
-              <span className="text-sm text-ios-text">Correo (Resend)</span>
+              <div>
+                <span className="block text-sm text-ios-text">Correo (Resend)</span>
+                <span className="text-[11px] text-ios-text-3">Notificaciones por email</span>
+              </div>
             </div>
             <Button size="sm" variant="secondary" loading={sendingTest} onClick={sendTestEmail}>
-              Enviar prueba
+              Probar
             </Button>
           </div>
         </Card>

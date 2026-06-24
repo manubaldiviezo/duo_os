@@ -31,6 +31,8 @@ export interface Profile {
   brand_color: string;
   brand_color_dark: string;
   brand_color_light: string;
+  brand_color_secondary: string | null;
+  font_family: string | null;
   timezone: string;
   currency: string;
   mrr_goal: number;
