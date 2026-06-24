@@ -14,7 +14,7 @@ import { TeamSection } from '@/components/settings/TeamSection';
 import { sendEmail, emailTemplate } from '@/lib/email';
 import { applyBrandColor, cn } from '@/lib/utils';
 
-const BRAND_COLORS = ['#7F77DD', '#FF2D55', '#34C759', '#007AFF', '#FF9500', '#AF52DE', '#FF3B30', '#5856D6'];
+const BRAND_COLORS = ['#F2741B', '#FF2D55', '#34C759', '#007AFF', '#AF52DE', '#FF3B30', '#5856D6', '#FFCC00'];
 
 type AIFeatures = Record<string, boolean>;
 
@@ -204,7 +204,11 @@ export function Profile() {
           </span>
         </Button>
 
-        <p className="pb-4 text-center text-xs text-ios-text-3">DUO OS · v0.1.0</p>
+        <div className="pb-4 pt-2 text-center text-[11px] leading-relaxed text-ios-text-3">
+          <p>DUO OS · v0.1.0</p>
+          <p>© {new Date().getFullYear()} DUO · Agencia de Marketing · Bolivia</p>
+          <p>Desarrollado por Emanuel Baldiviezo</p>
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
+import { Logo } from '@/components/ui/Logo';
 import { useUIStore } from '@/stores/uiStore';
 
 export function Register() {
@@ -39,8 +40,8 @@ export function Register() {
     <div className="flex min-h-screen flex-col justify-center bg-ios-bg px-6">
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand text-3xl font-extrabold text-white">
-            D
+          <div className="mx-auto mb-3 flex justify-center">
+            <Logo size={76} />
           </div>
           <h1 className="text-2xl font-bold text-ios-text">Crea tu cuenta</h1>
           <p className="mt-1 text-sm text-ios-text-3">Empieza a operar tu agencia</p>

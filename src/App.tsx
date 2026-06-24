@@ -32,8 +32,11 @@ export default function App() {
   const { session, profile, loading } = useAuthStore();
 
   // Aplica el color de marca del perfil a toda la app cuando carga/cambia.
+  // El morado original (#7F77DD) se trata como "sin elegir" -> naranja de marca.
   useEffect(() => {
-    applyBrandColor(profile?.brand_color);
+    const c = profile?.brand_color;
+    const effective = !c || c.toLowerCase() === '#7f77dd' ? '#F2741B' : c;
+    applyBrandColor(effective);
   }, [profile?.brand_color]);
 
   if (loading) return <FullScreenLoader />;

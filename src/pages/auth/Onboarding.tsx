@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
 
-const COLORS = ['#7F77DD', '#FF2D55', '#34C759', '#007AFF', '#FF9500', '#AF52DE'];
+const COLORS = ['#F2741B', '#FF2D55', '#34C759', '#007AFF', '#AF52DE', '#FFCC00'];
 
 const DEMO_CLIENTS = [
   { name: 'Femmeninas', industry: 'Moda/Femenino', monthly_fee: 800, services: ['estrategia', 'contenido', 'meta_ads'] },
@@ -26,7 +26,7 @@ export function Onboarding() {
   const [step, setStep] = useState(0);
   const [agencyName, setAgencyName] = useState(profile?.agency_name ?? '');
   const [userName, setUserName] = useState(profile?.user_name ?? '');
-  const [color, setColor] = useState('#7F77DD');
+  const [color, setColor] = useState('#F2741B');
   const [loading, setLoading] = useState(false);
 
   async function finish(loadDemo: boolean) {

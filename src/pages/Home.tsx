@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  IconCash,
+  IconCalendarEvent,
   IconAlertTriangle,
   IconUsers,
-  IconClock,
+  IconChecklist,
+  IconEye,
+  IconEyeOff,
 } from '@tabler/icons-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { calculateMRR, type MRRResult } from '@/lib/mrr';
-import { greeting, formatCurrency } from '@/lib/utils';
+import { greeting, isOverdue, cn } from '@/lib/utils';
 import { TopBar } from '@/components/layout/TopBar';
 import { MRRTracker } from '@/components/dashboard/MRRTracker';
 import { KPIGrid, type KPIItem } from '@/components/dashboard/KPIGrid';
@@ -18,43 +20,66 @@ import { TaskItem } from '@/components/tasks/TaskItem';
 import { LoadingDots } from '@/components/ui/LoadingDots';
 import type { AiInsight, Task } from '@/types/app.types';
 
+type Filter = 'all' | 'urgent' | 'meetings';
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'all', label: 'Pendientes' },
+  { value: 'urgent', label: 'Urgentes' },
+  { value: 'meetings', label: 'Reuniones' },
+];
+
 export function Home() {
   const { user, profile } = useAuthStore();
   const [mrr, setMrr] = useState<MRRResult | null>(null);
-  const [todayTasks, setTodayTasks] = useState<Task[]>([]);
+  const [flowTasks, setFlowTasks] = useState<Task[]>([]);
   const [overdueCount, setOverdueCount] = useState(0);
+  const [todayCount, setTodayCount] = useState(0);
   const [clientsCount, setClientsCount] = useState(0);
+  const [meetingsCount, setMeetingsCount] = useState(0);
   const [pending, setPending] = useState(0);
   const [insights, setInsights] = useState<AiInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<Filter>('all');
+  // Privacidad: por defecto las finanzas van ocultas (seguro si hay gente cerca).
+  const [showMoney, setShowMoney] = useState(() => localStorage.getItem('duo_show_money') === 'on');
+
+  function toggleMoney() {
+    setShowMoney((v) => {
+      const next = !v;
+      localStorage.setItem('duo_show_money', next ? 'on' : 'off');
+      return next;
+    });
+  }
 
   const load = useCallback(async () => {
     if (!user) return;
-    const nowISO = new Date().toISOString();
+    const now = new Date();
+    const nowISO = now.toISOString();
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
+    const weekEnd = new Date(Date.now() + 7 * 86400000).toISOString();
     const monthStart = new Date(new Date().setDate(1)).toISOString().split('T')[0];
 
-    const [mrrRes, todayRes, overdueRes, clientsRes, txRes, insightsRes] = await Promise.all([
+    const [mrrRes, flowRes, clientsRes, eventsRes, txRes, insightsRes] = await Promise.all([
       calculateMRR(user.id),
       supabase
         .from('tasks')
         .select('*, client:clients(name)')
         .eq('user_id', user.id)
         .neq('status', 'done')
-        .lte('due_date', endOfDay.toISOString())
-        .order('priority'),
-      supabase
-        .from('tasks')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .neq('status', 'done')
-        .lt('due_date', nowISO),
+        .lte('due_date', weekEnd)
+        .order('due_date', { ascending: true, nullsFirst: false }),
       supabase
         .from('clients')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .in('status', ['active', 'at_risk']),
+      supabase
+        .from('events')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('start_time', nowISO)
+        .lte('start_time', weekEnd),
       supabase
         .from('transactions')
         .select('amount, type')
@@ -70,10 +95,15 @@ export function Home() {
         .limit(5),
     ]);
 
+    const tasks = (flowRes.data as Task[]) ?? [];
     setMrr(mrrRes);
-    setTodayTasks((todayRes.data as Task[]) ?? []);
-    setOverdueCount(overdueRes.count ?? 0);
+    setFlowTasks(tasks);
+    setOverdueCount(tasks.filter((t) => isOverdue(t.due_date)).length);
+    setTodayCount(
+      tasks.filter((t) => t.due_date && new Date(t.due_date) <= endOfDay).length
+    );
     setClientsCount(clientsRes.count ?? 0);
+    setMeetingsCount(eventsRes.count ?? 0);
     setPending((txRes.data ?? []).reduce((s, t) => s + Number(t.amount), 0));
     setInsights((insightsRes.data as AiInsight[]) ?? []);
     setLoading(false);
@@ -87,10 +117,7 @@ export function Home() {
     const done = task.status === 'done';
     await supabase
       .from('tasks')
-      .update({
-        status: done ? 'pending' : 'done',
-        completed_at: done ? null : new Date().toISOString(),
-      })
+      .update({ status: done ? 'pending' : 'done', completed_at: done ? null : new Date().toISOString() })
       .eq('id', task.id);
     load();
   }
@@ -108,6 +135,12 @@ export function Home() {
     setInsights((prev) => prev.filter((i) => i.id !== id));
   }
 
+  const visibleTasks = useMemo(() => {
+    if (filter === 'urgent') return flowTasks.filter((t) => isOverdue(t.due_date) || t.priority === 'high');
+    if (filter === 'meetings') return flowTasks.filter((t) => t.category === 'meeting');
+    return flowTasks;
+  }, [flowTasks, filter]);
+
   if (loading || !mrr) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -117,19 +150,44 @@ export function Home() {
   }
 
   const kpis: KPIItem[] = [
-    { label: 'Ingresos/mes', value: formatCurrency(mrr.current), icon: IconCash, tone: 'green' },
+    { label: 'Hoy', value: String(todayCount), icon: IconChecklist },
     { label: 'Vencidas', value: String(overdueCount), icon: IconAlertTriangle, tone: 'red' },
     { label: 'Clientes', value: String(clientsCount), icon: IconUsers },
-    { label: 'Por cobrar', value: formatCurrency(pending), icon: IconClock, tone: 'orange' },
+    { label: 'Reuniones', value: String(meetingsCount), icon: IconCalendarEvent, tone: 'orange' },
   ];
 
   return (
     <div className="space-y-5">
-      <TopBar title={profile?.user_name ?? 'Inicio'} subtitle={greeting()} />
+      <TopBar
+        title={profile?.user_name ?? 'Inicio'}
+        subtitle={greeting()}
+        right={
+          <button
+            onClick={toggleMoney}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-ios-card text-ios-text-2"
+            aria-label={showMoney ? 'Ocultar finanzas' : 'Mostrar finanzas'}
+          >
+            {showMoney ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+          </button>
+        }
+      />
 
       <div className="space-y-5 px-5">
-        <MRRTracker mrr={mrr} />
+        {/* KPIs operativos (sin dinero) */}
         <KPIGrid items={kpis} />
+
+        {/* Finanzas: solo si el usuario las revela */}
+        {showMoney ? (
+          <MRRTracker mrr={mrr} />
+        ) : (
+          <Card onClick={toggleMoney} className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-ios-text">Finanzas</p>
+              <p className="text-xs text-ios-text-3">Tocá el ojo para mostrar montos</p>
+            </div>
+            <span className="text-lg font-bold tracking-widest text-ios-text-3">•••••</span>
+          </Card>
+        )}
 
         {insights.length > 0 && (
           <section className="space-y-2">
@@ -140,15 +198,30 @@ export function Home() {
           </section>
         )}
 
+        {/* Flujo de tareas con filtros */}
         <section>
-          <h2 className="mb-2 text-sm font-semibold text-ios-text-2">Hoy</h2>
-          {todayTasks.length === 0 ? (
+          <div className="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
+            {FILTERS.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                className={cn(
+                  'whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+                  filter === f.value ? 'bg-brand text-white' : 'bg-ios-card text-ios-text-2'
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {visibleTasks.length === 0 ? (
             <Card>
-              <p className="text-sm text-ios-text-3">Nada urgente para hoy. ¡Buen trabajo!</p>
+              <p className="text-sm text-ios-text-3">Nada por aquí. ¡Buen trabajo! 🎉</p>
             </Card>
           ) : (
             <div className="space-y-2">
-              {todayTasks.map((t) => (
+              {visibleTasks.map((t) => (
                 <TaskItem key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask} />
               ))}
             </div>

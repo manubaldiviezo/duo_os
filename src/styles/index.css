@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --brand: #7f77dd;
-  --brand-d: #534ab7;
-  --brand-l: #eeedfe;
+  --brand: #f2741b;
+  --brand-d: #c75a11;
+  --brand-l: #fcead9;
   --ios-bg: #f2f2f7;
   --ios-card: #ffffff;
   --ios-text: #000000;
