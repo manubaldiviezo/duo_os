@@ -41,12 +41,35 @@ interface SessionRow {
   updated_at: string;
 }
 
+const START_PROMPT =
+  'Ayúdame a configurar mi agencia en DUO Community desde cero. Primero explícame en pasos simples qué datos debo cargar. Luego guíame para agregar múltiples clientes, tareas, gastos o reuniones por bloques. No crees ni edites nada todavía sin mostrarme un resumen y pedirme confirmación.';
+
 const SUGGESTIONS = [
-  '🚀 Configurar mi agencia paso a paso',
-  '¿Qué hago primero hoy?',
-  'Crea una tarea: llamar a Femmeninas mañana',
-  '¿Cómo cierro el gap de MRR?',
-  '¿Algún cliente en riesgo?',
+  {
+    label: '¿Agendar nueva reunión?',
+    prompt:
+      'Ayúdame a agendar una nueva reunión en Google Calendar. Pídeme solo los datos necesarios: título, fecha, hora, duración, invitados y descripción. Antes de crearla, muéstrame un resumen para confirmar.',
+  },
+  {
+    label: 'Asignar nueva tarea',
+    prompt:
+      'Ayúdame a crear una nueva tarea para mi agencia. Pídeme responsable, cliente, fecha límite, prioridad y descripción. Antes de crearla, muéstrame un resumen para confirmar.',
+  },
+  {
+    label: 'Agregar clientes a la agencia',
+    prompt:
+      'Ayúdame a agregar varios clientes a mi agencia. Dame un formato simple para cargar múltiples clientes de una sola vez con nombre, contacto, servicio, estado y notas. No guardes nada hasta que confirme.',
+  },
+  {
+    label: 'Agregar pagos en finanzas',
+    prompt:
+      'Ayúdame a registrar pagos de clientes en finanzas. Pídeme cliente, monto, moneda, fecha, concepto y estado del pago. Si quiero agregar varios pagos, dame un formato por bloques.',
+  },
+  {
+    label: 'Organizar mi día',
+    prompt:
+      'Revisa mis tareas, reuniones y recordatorios de hoy. Ordénalos por prioridad y dime qué debería hacer primero.',
+  },
 ];
 
 export function Assistant() {
@@ -78,7 +101,7 @@ export function Assistant() {
       .then(({ data }) => setMembers((data as TeamMember[]) ?? []));
   }, [user]);
 
-  // Uso de IA del mes (con reseteo mensual).
+  // Uso de IA del mes con reseteo mensual.
   useEffect(() => {
     const reset = profile?.ai_messages_reset;
     const month = new Date().toISOString().slice(0, 7);
@@ -93,24 +116,35 @@ export function Assistant() {
 
   async function persist(msgs: Msg[]): Promise<void> {
     if (!user) return;
+
     if (!conversationId) {
       const title = msgs.find((m) => m.role === 'user')?.text.slice(0, 50) ?? 'Conversación';
+
       const { data } = await supabase
         .from('ai_conversations')
         .insert({ user_id: user.id, title, messages: msgs })
         .select('id')
         .single();
+
       if (data?.id) setConversationId(data.id);
 
-      // Limitar chats guardados según el plan (borra los más viejos).
+      // Limitar chats guardados según el plan.
       const cap = PLANS[(profile?.plan ?? 'free') as Plan].savedChats;
+
       const { data: all } = await supabase
         .from('ai_conversations')
         .select('id')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
+
       if (all && all.length > cap) {
-        await supabase.from('ai_conversations').delete().in('id', all.slice(cap).map((r: any) => r.id));
+        await supabase
+          .from('ai_conversations')
+          .delete()
+          .in(
+            'id',
+            all.slice(cap).map((r: any) => r.id)
+          );
       }
     } else {
       await supabase.from('ai_conversations').update({ messages: msgs }).eq('id', conversationId);
@@ -120,32 +154,46 @@ export function Assistant() {
   async function send(text: string) {
     if (!text.trim() || !user || thinking) return;
 
-    // Límites por plan
+    // Límites por plan.
     const plan = (profile?.plan ?? 'free') as Plan;
+
     if (isFreeExpired(plan, profile?.plan_started_at)) {
       toast('Tu prueba gratis de 21 días terminó. Mejora tu plan para seguir usando la IA.', 'info');
       navigate('/planes');
       return;
     }
+
     if (usage >= PLANS[plan].aiMessagesPerMonth) {
       toast('Alcanzaste el límite de mensajes de IA de tu plan.', 'info');
       navigate('/planes');
       return;
     }
+
     setUsage((u) => u + 1);
     void supabase.rpc('bump_ai_usage');
 
     if (isRecording) stop();
+
     const base: Msg[] = [...messages, { role: 'user', text }];
     setMessages(base);
     setInput('');
     setThinking(true);
 
     const systemPrompt = await buildSystemPrompt(user.id);
-    const history: GeminiHistoryItem[] = messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] }));
-    const response = await callGemini({ systemPrompt, userMessage: text, conversationHistory: history });
+    const history: GeminiHistoryItem[] = messages.map((m) => ({
+      role: m.role,
+      parts: [{ text: m.text }],
+    }));
+
+    const response = await callGemini({
+      systemPrompt,
+      userMessage: text,
+      conversationHistory: history,
+    });
+
     const replyText = typeof response === 'string' ? response : '';
     const action = parseAction(replyText);
+
     setThinking(false);
 
     if (action) {
@@ -160,13 +208,21 @@ export function Assistant() {
 
   async function confirmAction() {
     if (!pending || !user) return;
+
     setThinking(true);
-    const result = await executeAction(pending.action, { userId: user.id, members });
+
+    const result = await executeAction(pending.action, {
+      userId: user.id,
+      members,
+    });
+
     const next: Msg[] = [...messages, { role: 'model', text: result }];
+
     setMessages(next);
     setPending(null);
     setThinking(false);
     await persist(next);
+
     toast('Acción aplicada', 'success');
   }
 
@@ -184,18 +240,25 @@ export function Assistant() {
 
   async function openSessions() {
     if (!user) return;
+
     const { data } = await supabase
       .from('ai_conversations')
       .select('id, title, updated_at')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(20);
+
     setSessions((data as SessionRow[]) ?? []);
     setShowSessions(true);
   }
 
   async function loadSession(s: SessionRow) {
-    const { data } = await supabase.from('ai_conversations').select('messages').eq('id', s.id).single();
+    const { data } = await supabase
+      .from('ai_conversations')
+      .select('messages')
+      .eq('id', s.id)
+      .single();
+
     setMessages(((data?.messages as Msg[]) ?? []).filter((m) => m && m.role && m.text));
     setConversationId(s.id);
     setPending(null);
@@ -211,7 +274,7 @@ export function Assistant() {
     <div className="flex h-[calc(100vh-84px)] flex-col">
       <TopBar
         title="Asistente"
-        subtitle="Tu copiloto ejecutor"
+        subtitle="Tu copiloto operativo"
         right={
           <div className="flex gap-2">
             <button
@@ -221,6 +284,7 @@ export function Assistant() {
             >
               <IconHistory size={20} />
             </button>
+
             <button
               onClick={newChat}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-white"
@@ -238,18 +302,33 @@ export function Assistant() {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-l">
               <IconSparkles size={30} className="text-brand" />
             </div>
-            <p className="max-w-xs text-sm text-ios-text-3">
-              Pídeme lo que sea: puedo responder con tus datos y también crear o editar tareas y
-              clientes. Siempre te muestro qué voy a hacer antes de tocar nada.
-            </p>
+
+            <div>
+              <h2 className="text-lg font-semibold text-ios-text">¿Qué quieres hacer ahora?</h2>
+              <p className="mt-1 max-w-xs text-sm text-ios-text-3">
+                Puedes configurar tu agencia, crear tareas, agendar reuniones, cargar clientes o
+                registrar pagos usando texto o voz.
+              </p>
+            </div>
+
+            <button
+              onClick={() => send(START_PROMPT)}
+              className="w-full rounded-2xl bg-brand px-4 py-4 text-left text-sm font-semibold text-white"
+            >
+              🚀 Comenzar a configurar mi agencia en DUO
+              <span className="mt-1 block text-xs font-normal text-white/80">
+                Ideal si estás entrando por primera vez.
+              </span>
+            </button>
+
             <div className="grid w-full gap-2">
               {SUGGESTIONS.map((s) => (
                 <button
-                  key={s}
-                  onClick={() => send(s)}
+                  key={s.label}
+                  onClick={() => send(s.prompt)}
                   className="rounded-xl bg-ios-card px-4 py-3 text-left text-sm text-ios-text"
                 >
-                  {s}
+                  {s.label}
                 </button>
               ))}
             </div>
@@ -277,24 +356,28 @@ export function Assistant() {
               <IconSparkles size={18} className="text-brand" />
               <span className="text-sm font-semibold text-ios-text">{pending.desc.title}</span>
             </div>
+
             {pending.desc.lines.length > 0 && (
               <div className="mb-3 space-y-0.5">
-                {pending.desc.lines.map((l, i) => (
-                  <p key={i} className="text-sm text-ios-text-2">
-                    {l}
+                {pending.desc.lines.map((line, index) => (
+                  <p key={index} className="text-sm text-ios-text-2">
+                    {line}
                   </p>
                 ))}
               </div>
             )}
+
             <p className="mb-3 text-xs text-ios-text-3">
               {pending.action.confirmation_message ?? '¿Confirmas esta acción?'}
             </p>
+
             <div className="flex gap-2">
               <Button size="sm" className="flex-1" onClick={confirmAction}>
                 <span className="flex items-center justify-center gap-1">
-                  <IconCheck size={16} /> Confirmar
+                  <IconCheck size={16 /> Confirmar
                 </span>
               </Button>
+
               <Button size="sm" variant="secondary" className="flex-1" onClick={cancelAction}>
                 <span className="flex items-center justify-center gap-1">
                   <IconX size={16} /> Cancelar
@@ -326,6 +409,7 @@ export function Assistant() {
             {isRecording ? <IconPlayerStopFilled size={18} /> : <IconMicrophone size={18} />}
           </button>
         )}
+
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -333,10 +417,12 @@ export function Assistant() {
           placeholder={isRecording ? 'Escuchando…' : 'Escribe o dicta un mensaje…'}
           className="flex-1 rounded-full bg-ios-card px-4 py-2.5 text-sm text-ios-text outline-none"
         />
+
         <button
           onClick={() => send(input)}
           disabled={!input.trim() || thinking}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white disabled:opacity-40"
+          aria-label="Enviar"
         >
           <IconSend size={18} />
         </button>
@@ -344,7 +430,9 @@ export function Assistant() {
 
       <BottomSheet open={showSessions} onClose={() => setShowSessions(false)} title="Conversaciones">
         {sessions.length === 0 ? (
-          <p className="py-6 text-center text-sm text-ios-text-3">Aún no tienes conversaciones guardadas.</p>
+          <p className="py-6 text-center text-sm text-ios-text-3">
+            Aún no tienes conversaciones guardadas.
+          </p>
         ) : (
           <div className="space-y-2">
             {sessions.map((s) => (
@@ -353,7 +441,9 @@ export function Assistant() {
                 onClick={() => loadSession(s)}
                 className="w-full rounded-xl bg-ios-bg px-4 py-3 text-left"
               >
-                <p className="truncate text-sm font-medium text-ios-text">{s.title ?? 'Conversación'}</p>
+                <p className="truncate text-sm font-medium text-ios-text">
+                  {s.title ?? 'Conversación'}
+                </p>
                 <p className="text-xs text-ios-text-3">
                   {new Date(s.updated_at).toLocaleDateString('es-BO')}
                 </p>
