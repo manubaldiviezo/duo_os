@@ -6,6 +6,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function Input({ label, className, id, ...props }: InputProps) {
   const inputId = id ?? props.name;
+
   return (
     <div className="w-full">
       {label && (
@@ -13,10 +14,11 @@ export function Input({ label, className, id, ...props }: InputProps) {
           {label}
         </label>
       )}
+
       <input
         id={inputId}
         className={cn(
-          'w-full rounded-xl bg-ios-bg px-4 py-3 text-sm text-ios-text outline-none',
+          'w-full rounded-xl bg-ios-bg px-4 py-3 text-base text-ios-text outline-none',
           'placeholder:text-ios-text-3 focus:ring-2 focus:ring-brand/40',
           className
         )}
