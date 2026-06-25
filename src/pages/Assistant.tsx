@@ -75,6 +75,10 @@ const SUGGESTIONS = [
   },
 ];
 
+function assistantStartedKey(userId: string) {
+  return `duo-community-assistant-started-${userId}`;
+}
+
 export function Assistant() {
   const { user, profile, setProfile } = useAuthStore();
   const navigate = useNavigate();
@@ -92,11 +96,21 @@ export function Assistant() {
   const [hasStartedBefore, setHasStartedBefore] = useState(false);
 
   const { isRecording, transcript, supported, start, stop } = useVoice();
+
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, thinking, pending]);
+
+  useEffect(() => {
+    const target = textareaRef.current;
+    if (!target) return;
+
+    target.style.height = 'auto';
+    target.style.height = `${Math.min(target.scrollHeight, 112)}px`;
+  }, [input]);
 
   useEffect(() => {
     if (!user) return;
@@ -113,7 +127,6 @@ export function Assistant() {
     void loadSessions();
   }, [user]);
 
-  // Uso de IA del mes con reseteo mensual.
   useEffect(() => {
     const reset = profile?.ai_messages_reset;
     const month = new Date().toISOString().slice(0, 7);
@@ -121,7 +134,6 @@ export function Assistant() {
     setUsage(sameMonth ? profile?.ai_messages_month ?? 0 : 0);
   }, [profile?.ai_messages_month, profile?.ai_messages_reset]);
 
-  // La voz va llenando la caja de texto.
   useEffect(() => {
     if (isRecording) setInput(transcript);
   }, [transcript, isRecording]);
@@ -138,8 +150,17 @@ export function Assistant() {
 
     const rows = (data as SessionRow[]) ?? [];
 
+    const localStarted =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem(assistantStartedKey(user.id)) === 'true'
+        : false;
+
+    if (rows.length > 0 && typeof window !== 'undefined') {
+      window.localStorage.setItem(assistantStartedKey(user.id), 'true');
+    }
+
     setSessions(rows);
-    setHasStartedBefore(rows.length > 0);
+    setHasStartedBefore(localStarted || rows.length > 0);
   }
 
   async function cleanupOldChats() {
@@ -164,6 +185,10 @@ export function Assistant() {
 
   async function persist(msgs: Msg[]): Promise<void> {
     if (!user) return;
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(assistantStartedKey(user.id), 'true');
+    }
 
     if (!conversationId) {
       const title = msgs.find((m) => m.role === 'user')?.text.slice(0, 50) ?? 'Conversación';
@@ -196,7 +221,6 @@ export function Assistant() {
   async function send(text: string) {
     if (!text.trim() || !user || thinking) return;
 
-    // Límites por plan.
     const plan = (profile?.plan ?? 'free') as Plan;
 
     if (isFreeExpired(plan, profile?.plan_started_at)) {
@@ -260,6 +284,7 @@ export function Assistant() {
 
     if (pending.action.action === 'update_mrr_goal' && profile) {
       const nextGoal = Number(pending.action.mrr_goal ?? pending.action.goal);
+
       if (Number.isFinite(nextGoal)) {
         setProfile({ ...profile, mrr_goal: nextGoal });
       }
@@ -277,6 +302,7 @@ export function Assistant() {
 
   function cancelAction() {
     if (!pending) return;
+
     setMessages((prev) => [...prev, { role: 'model', text: 'Acción cancelada.' }]);
     setPending(null);
   }
@@ -491,18 +517,23 @@ export function Assistant() {
         )}
 
         <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-  if (e.key !== 'Enter') return;
+            if (e.key !== 'Enter') return;
 
-  if (e.shiftKey) {
-    return;
-  }
+            if (e.shiftKey) {
+              return;
+            }
 
-  e.preventDefault();
-  void send(input);
-}}
+            e.preventDefault();
+            void send(input);
+          }}
+          rows={1}
+          placeholder={isRecording ? 'Escuchando…' : 'Escribe o dicta un mensaje…'}
+          className="max-h-28 min-h-10 flex-1 resize-none rounded-2xl bg-ios-card px-4 py-2.5 text-sm leading-5 text-ios-text outline-none"
+        />
 
         <button
           onClick={() => send(input)}
