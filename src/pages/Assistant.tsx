@@ -493,10 +493,16 @@ export function Assistant() {
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && send(input)}
-          placeholder={isRecording ? 'Escuchando…' : 'Escribe o dicta un mensaje…'}
-          className="flex-1 rounded-full bg-ios-card px-4 py-2.5 text-sm text-ios-text outline-none"
-        />
+          onKeyDown={(e) => {
+  if (e.key !== 'Enter') return;
+
+  if (e.shiftKey) {
+    return;
+  }
+
+  e.preventDefault();
+  void send(input);
+}}
 
         <button
           onClick={() => send(input)}
