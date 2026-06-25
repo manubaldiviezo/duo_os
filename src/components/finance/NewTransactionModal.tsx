@@ -6,7 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
-import type { Client, TransactionType } from '@/types/app.types';
+import type { Client, Transaction, TransactionType } from '@/types/app.types';
 
 const TYPES: { value: TransactionType; label: string }[] = [
   { value: 'income', label: 'Ingreso' },
@@ -18,9 +18,24 @@ interface NewTransactionModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  transactionToEdit?: Transaction | null;
 }
 
-export function NewTransactionModal({ open, onClose, onCreated }: NewTransactionModalProps) {
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function normalizeDate(value?: string | null) {
+  if (!value) return todayISO();
+  return value.includes('T') ? value.split('T')[0] : value;
+}
+
+export function NewTransactionModal({
+  open,
+  onClose,
+  onCreated,
+  transactionToEdit,
+}: NewTransactionModalProps) {
   const user = useAuthStore((s) => s.user);
   const toast = useUIStore((s) => s.toast);
   const [clients, setClients] = useState<Client[]>([]);
@@ -28,46 +43,99 @@ export function NewTransactionModal({ open, onClose, onCreated }: NewTransaction
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [category, setCategory] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [notes, setNotes] = useState('');
+  const [date, setDate] = useState(todayISO());
   const [loading, setLoading] = useState(false);
+
+  const isEditing = Boolean(transactionToEdit);
 
   useEffect(() => {
     if (!open || !user) return;
+
     supabase
       .from('clients')
       .select('*')
       .eq('user_id', user.id)
+      .order('name', { ascending: true })
       .then(({ data }) => setClients((data as Client[]) ?? []));
   }, [open, user]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (transactionToEdit) {
+      setType(transactionToEdit.type);
+      setAmount(String(transactionToEdit.amount ?? ''));
+      setDescription(transactionToEdit.description ?? '');
+      setClientId(transactionToEdit.client_id ?? '');
+      setCategory(transactionToEdit.category ?? '');
+      setPaymentMethod(transactionToEdit.payment_method ?? '');
+      setNotes(transactionToEdit.notes ?? '');
+      setDate(normalizeDate(transactionToEdit.date));
+      return;
+    }
+
+    setType('income');
+    setAmount('');
+    setDescription('');
+    setClientId('');
+    setCategory('');
+    setPaymentMethod('');
+    setNotes('');
+    setDate(todayISO());
+  }, [open, transactionToEdit]);
 
   async function save() {
     if (!user || !amount || !description.trim()) {
       toast('Completa monto y descripción', 'error');
       return;
     }
+
+    const parsedAmount = Number(amount);
+
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast('El monto debe ser mayor a 0', 'error');
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.from('transactions').insert({
+
+    const payload = {
       user_id: user.id,
       type,
-      amount: Number(amount),
+      amount: parsedAmount,
       description: description.trim(),
       client_id: clientId || null,
+      category: category.trim() || null,
+      payment_method: paymentMethod.trim() || null,
+      notes: notes.trim() || null,
       date,
-    });
+    };
+
+    const { error } = isEditing && transactionToEdit
+      ? await supabase
+          .from('transactions')
+          .update(payload)
+          .eq('id', transactionToEdit.id)
+          .eq('user_id', user.id)
+      : await supabase.from('transactions').insert(payload);
+
     setLoading(false);
+
     if (error) {
       toast(error.message, 'error');
       return;
     }
-    toast('Transacción registrada', 'success');
-    setAmount('');
-    setDescription('');
+
+    toast(isEditing ? 'Movimiento actualizado' : 'Transacción registrada', 'success');
     onCreated();
     onClose();
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Nueva transacción">
+    <BottomSheet open={open} onClose={onClose} title={isEditing ? 'Editar movimiento' : 'Nueva transacción'}>
       <div className="space-y-3">
         <div className="grid grid-cols-3 gap-2">
           {TYPES.map((t) => (
@@ -83,17 +151,22 @@ export function NewTransactionModal({ open, onClose, onCreated }: NewTransaction
             </button>
           ))}
         </div>
+
         <Input
           label="Monto (USD)"
           type="number"
+          min="0"
+          step="0.01"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
+
         <Input
           label="Descripción"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+
         <div>
           <label className="mb-1.5 block text-xs font-medium text-ios-text-2">Cliente</label>
           <select
@@ -109,9 +182,32 @@ export function NewTransactionModal({ open, onClose, onCreated }: NewTransaction
             ))}
           </select>
         </div>
+
         <Input label="Fecha" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+
+        <Input
+          label="Categoría"
+          placeholder="Mensualidad, software, pauta, producción..."
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        />
+
+        <Input
+          label="Método de pago"
+          placeholder="USDT, transferencia, efectivo..."
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value)}
+        />
+
+        <Input
+          label="Notas"
+          placeholder="Detalle opcional"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+
         <Button size="lg" className="w-full" loading={loading} onClick={save}>
-          Registrar
+          {isEditing ? 'Guardar cambios' : 'Registrar'}
         </Button>
       </div>
     </BottomSheet>
