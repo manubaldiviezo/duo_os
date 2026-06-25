@@ -15,6 +15,7 @@ const KNOWN_ACTIONS = [
   'update_client',
   'add_transaction',
   'mark_payment_paid',
+  'update_mrr_goal',
 ];
 
 /** Intenta extraer una acción JSON del texto crudo de Gemini. Devuelve null si no es una acción. */
@@ -88,6 +89,13 @@ export function describeAction(a: AIAction): { title: string; lines: string[] } 
       return {
         title: 'Marcar cobro como recibido',
         lines: [a.client_name && `• ${a.client_name}`].filter(Boolean) as string[],
+      };
+    }
+    case 'update_mrr_goal': {
+      const goal = Number(a.mrr_goal ?? a.goal ?? 0);
+      return {
+        title: 'Actualizar meta mensual',
+        lines: [`• Nueva meta: $${goal.toLocaleString('en-US')} USD`],
       };
     }
     default:
@@ -240,6 +248,24 @@ export async function executeAction(
       const { error } = await q;
       if (error) return `No pude actualizar el cobro: ${error.message}`;
       return 'Cobro marcado como recibido. ✅';
+    }
+
+    case 'update_mrr_goal': {
+      const rawGoal = a.mrr_goal ?? a.goal;
+      const goal = Number(rawGoal);
+
+      if (!Number.isFinite(goal) || goal < 0) {
+        return 'No pude actualizar la meta porque el monto no es válido.';
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ mrr_goal: goal })
+        .eq('id', ctx.userId);
+
+      if (error) return `No pude actualizar la meta mensual: ${error.message}`;
+
+      return `Meta mensual actualizada a $${goal.toLocaleString('en-US')} USD.`;
     }
 
     default:
