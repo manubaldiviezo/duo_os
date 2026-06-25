@@ -20,7 +20,7 @@ const tabs = [
 
 export function TabBar() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 flex h-[84px] items-start border-t border-ios-sep bg-ios-card/90 pb-7 pt-2 backdrop-blur-ios">
+    <nav className="fixed inset-x-0 bottom-0 z-50 flex h-[84px] items-start border-t border-ios-sep bg-ios-card/90 pb-7 pt-2 backdrop-blur-ios md:hidden">
       {tabs.map(({ to, icon: Icon, label }) => (
         <NavLink
           key={to}

@@ -34,14 +34,14 @@ const FONTS = [
 
 type AIFeatures = Record<string, boolean>;
 
-const AI_LABELS: Record<string, string> = {
-  morning_briefing: 'Briefing matutino',
-  churn_detection: 'Detección de churn',
-  time_blocking: 'Time blocking',
-  pattern_detection: 'Detección de patrones',
-  voice_capture: 'Captura por voz',
-  mrr_coaching: 'Coaching de MRR',
-};
+const AI_FEATURES: { key: string; label: string; desc: string }[] = [
+  { key: 'voice_capture', label: 'Captura por voz', desc: 'Dictar tareas e ideas con el micrófono.' },
+  { key: 'churn_detection', label: 'Alertas de clientes en riesgo', desc: 'Avisa si un cliente lleva mucho sin contacto o con pagos/tareas atrasados.' },
+  { key: 'morning_briefing', label: 'Resumen matutino', desc: 'Un resumen de tu día cada mañana.' },
+  { key: 'mrr_coaching', label: 'Coach de crecimiento', desc: 'Sugerencias de la IA para subir tus ingresos mensuales.' },
+  { key: 'pattern_detection', label: 'Detección de patrones', desc: 'Identifica retrasos o riesgos que se repiten con tus clientes.' },
+  { key: 'time_blocking', label: 'Organización del día', desc: 'La IA ordena tus tareas por prioridad cuando se lo pides.' },
+];
 
 export function Profile() {
   const { user, profile, setProfile } = useAuthStore();
@@ -120,13 +120,6 @@ export function Profile() {
     applyBrandColor(hex); // cambio inmediato en pantalla
     if (profile) setProfile({ ...profile, brand_color: hex });
     await supabase.from('profiles').update({ brand_color: hex }).eq('id', user.id);
-  }
-
-  async function changeSecondary(hex: string) {
-    if (!user) return;
-    document.documentElement.style.setProperty('--brand-2', hex);
-    if (profile) setProfile({ ...profile, brand_color_secondary: hex });
-    await supabase.from('profiles').update({ brand_color_secondary: hex }).eq('id', user.id);
   }
 
   async function changeFont(key: string) {
@@ -246,29 +239,6 @@ export function Profile() {
             </div>
           </div>
 
-          {/* Color secundario (acento) */}
-          <div>
-            <p className="mb-2 text-xs font-medium text-ios-text-2">Color secundario (acento)</p>
-            <div className="flex flex-wrap gap-2.5">
-              {BRAND_COLORS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => changeSecondary(c)}
-                  className={cn(
-                    'h-9 w-9 rounded-full transition-transform active:scale-90',
-                    profile?.brand_color_secondary?.toLowerCase() === c.toLowerCase() && 'ring-2 ring-offset-2 ring-offset-ios-card'
-                  )}
-                  style={{ backgroundColor: c }}
-                  aria-label={`Acento ${c}`}
-                />
-              ))}
-              <label className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-ios-text-3 text-xs text-ios-text-3">
-                +
-                <input type="color" className="sr-only" value={profile?.brand_color_secondary ?? '#FFB037'} onChange={(e) => changeSecondary(e.target.value)} />
-              </label>
-            </div>
-          </div>
-
           {/* Tipografía */}
           <div>
             <p className="mb-2 text-xs font-medium text-ios-text-2">Tipografía</p>
@@ -294,13 +264,14 @@ export function Profile() {
 
         <Card className="space-y-4">
           <h2 className="text-sm font-semibold text-ios-text-2">Funciones de IA</h2>
-          {Object.keys(AI_LABELS).map((key) => (
-            <Toggle
-              key={key}
-              label={AI_LABELS[key]}
-              checked={aiFeatures[key] ?? true}
-              onChange={(v) => toggleAi(key, v)}
-            />
+          {AI_FEATURES.map((f) => (
+            <div key={f.key} className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ios-text">{f.label}</p>
+                <p className="text-[11px] leading-snug text-ios-text-3">{f.desc}</p>
+              </div>
+              <Toggle checked={aiFeatures[f.key] ?? true} onChange={(v) => toggleAi(f.key, v)} />
+            </div>
           ))}
         </Card>
 
