@@ -19,8 +19,9 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
             exit={{ opacity: 0 }}
             onClick={onClose}
           />
+
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-[70] max-h-[88vh] overflow-y-auto rounded-t-3xl bg-ios-card p-5 pb-10 no-scrollbar"
+            className="fixed inset-x-0 bottom-0 z-[70] flex max-h-[88dvh] flex-col overflow-hidden rounded-t-3xl bg-ios-card p-5 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -32,9 +33,12 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
               if (info.offset.y > 120) onClose();
             }}
           >
-            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-ios-text-3/40" />
-            {title && <h2 className="mb-4 text-lg font-bold text-ios-text">{title}</h2>}
-            {children}
+            <div className="mx-auto mb-4 h-1.5 w-10 shrink-0 rounded-full bg-ios-text-3/40" />
+            {title && <h2 className="mb-4 shrink-0 text-lg font-bold text-ios-text">{title}</h2>}
+
+            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
+              {children}
+            </div>
           </motion.div>
         </>
       )}

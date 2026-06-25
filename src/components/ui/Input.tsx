@@ -20,6 +20,7 @@ export function Input({ label, className, id, ...props }: InputProps) {
         className={cn(
           'w-full rounded-xl bg-ios-bg px-4 py-3 text-base text-ios-text outline-none',
           'placeholder:text-ios-text-3 focus:ring-2 focus:ring-brand/40',
+          'disabled:cursor-not-allowed disabled:opacity-60',
           className
         )}
         {...props}
