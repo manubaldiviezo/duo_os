@@ -476,7 +476,7 @@ export function Assistant() {
         )}
       </div>
 
-      <div className="flex items-center gap-2 border-t border-ios-sep bg-ios-bg/80 px-5 py-3 backdrop-blur-ios">
+      <div className="flex items-end gap-2 border-t border-ios-sep bg-ios-bg/80 px-5 py-3 backdrop-blur-ios">
         {supported && (
           <button
             onClick={micClick}
@@ -490,7 +490,7 @@ export function Assistant() {
           </button>
         )}
 
-        <input
+        <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send(input)}
