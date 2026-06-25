@@ -6,6 +6,7 @@ import {
   IconUsers,
   IconChartBar,
   IconUser,
+  IconCalendarEvent,
 } from '@tabler/icons-react';
 import { useAuthStore } from '@/stores/authStore';
 import { Logo } from '@/components/ui/Logo';
@@ -15,6 +16,7 @@ const tabs = [
   { to: '/', icon: IconHome, label: 'Inicio' },
   { to: '/tareas', icon: IconChecklist, label: 'Tareas' },
   { to: '/ia', icon: IconSparkles, label: 'Asistente IA' },
+  { to: '/reuniones', icon: IconCalendarEvent, label: 'Reuniones' },
   { to: '/clientes', icon: IconUsers, label: 'Clientes' },
   { to: '/finanzas', icon: IconChartBar, label: 'Finanzas' },
   { to: '/perfil', icon: IconUser, label: 'Perfil' },

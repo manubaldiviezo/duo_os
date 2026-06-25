@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { IconCircle, IconCircleCheckFilled, IconTrash } from '@tabler/icons-react';
 import { Pill } from '@/components/ui/Pill';
-import { cn, formatDate, isOverdue } from '@/lib/utils';
+import { cn, formatTaskWhen, isOverdue } from '@/lib/utils';
 import type { Task, TaskPriority } from '@/types/app.types';
 
 const PRIORITY_COLOR: Record<TaskPriority, 'red' | 'orange' | 'gray'> = {
@@ -55,7 +55,7 @@ export function TaskItem({ task, onToggle, onDelete, onEdit }: TaskItemProps) {
             {task.client?.name && <span className="text-xs text-ios-text-3">{task.client.name}</span>}
             {task.due_date && (
               <span className={cn('text-xs', overdue ? 'text-ios-red' : 'text-ios-text-3')}>
-                {formatDate(task.due_date)}
+                {formatTaskWhen(task.due_date, task.due_end)}
               </span>
             )}
           </div>

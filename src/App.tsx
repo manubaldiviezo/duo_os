@@ -23,6 +23,7 @@ const Finance = lazy(() => import('@/pages/Finance').then((m) => ({ default: m.F
 const Profile = lazy(() => import('@/pages/Profile').then((m) => ({ default: m.Profile })));
 const Plans = lazy(() => import('@/pages/Plans').then((m) => ({ default: m.Plans })));
 const Ideas = lazy(() => import('@/pages/Ideas').then((m) => ({ default: m.Ideas })));
+const Meetings = lazy(() => import('@/pages/Meetings').then((m) => ({ default: m.Meetings })));
 
 function FullScreenLoader() {
   return (
@@ -78,6 +79,7 @@ export default function App() {
               <Route path="/clientes/:id" element={<ClientDetail />} />
               <Route path="/finanzas" element={<Finance />} />
               <Route path="/ideas" element={<Ideas />} />
+              <Route path="/reuniones" element={<Meetings />} />
               <Route path="/planes" element={<Plans />} />
               <Route path="/perfil" element={<Profile />} />
             </Route>

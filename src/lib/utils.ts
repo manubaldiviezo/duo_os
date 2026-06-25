@@ -63,7 +63,55 @@ export function todayISO(): string {
 
 export function isOverdue(dueDate: string | null): boolean {
   if (!dueDate) return false;
-  return new Date(dueDate).getTime() < Date.now();
+  const d = new Date(dueDate);
+  // Si no tiene hora (fecha sola), vence al final de ese día.
+  if (d.getHours() === 0 && d.getMinutes() === 0) {
+    const end = new Date(d);
+    end.setHours(23, 59, 59, 999);
+    return end.getTime() < Date.now();
+  }
+  return d.getTime() < Date.now();
+}
+
+/** ¿El timestamp tiene hora (distinta de 00:00 local)? */
+export function hasTime(iso: string | null | undefined): boolean {
+  if (!iso) return false;
+  const d = new Date(iso);
+  return d.getHours() !== 0 || d.getMinutes() !== 0;
+}
+
+export function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+}
+
+/** Texto "cuándo" de una tarea: fecha + hora/rango si los hay. */
+export function formatTaskWhen(dueDate: string | null, dueEnd?: string | null): string {
+  if (!dueDate) return '';
+  const datePart = formatDate(dueDate);
+  if (!hasTime(dueDate)) return datePart;
+  const start = formatTime(dueDate);
+  if (dueEnd) return `${datePart} · ${start}–${formatTime(dueEnd)}`;
+  return `${datePart} · ${start}`;
+}
+
+/** Fecha local en formato YYYY-MM-DD (para inputs date, sin desfase de zona). */
+export function toLocalDateInput(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Hora local HH:mm (para inputs time). */
+export function toLocalTimeInput(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** Combina fecha (YYYY-MM-DD) + hora opcional (HH:mm) como hora LOCAL y devuelve ISO. */
+export function localDateTimeToISO(dateStr: string, timeStr?: string): string {
+  const t = timeStr && timeStr.length ? timeStr : '00:00';
+  return new Date(`${dateStr}T${t}:00`).toISOString();
 }
 
 /**

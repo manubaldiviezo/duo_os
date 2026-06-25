@@ -84,6 +84,7 @@ export interface Task {
   priority: TaskPriority;
   status: TaskStatus;
   due_date: string | null;
+  due_end: string | null;
   estimated_minutes: number | null;
   actual_minutes: number | null;
   created_via: TaskSource;
