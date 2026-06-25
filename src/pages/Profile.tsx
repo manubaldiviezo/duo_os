@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { Toggle } from '@/components/ui/Toggle';
 import { TeamSection } from '@/components/settings/TeamSection';
 import { sendEmail, emailTemplate } from '@/lib/email';
-import { applyBrandColor, FONT_STACKS, cn } from '@/lib/utils';
+import { applyBrandColor, FONT_STACKS, resizeImageToDataUrl, cn } from '@/lib/utils';
 
 const BRAND_COLORS = ['#F2741B', '#FF2D55', '#34C759', '#007AFF', '#AF52DE', '#FF3B30', '#5856D6', '#FFCC00'];
 const FONTS = [
@@ -132,20 +132,21 @@ export function Profile() {
   async function uploadLogo(file: File) {
     if (!user) return;
     setUploadingLogo(true);
-    const ext = (file.name.split('.').pop() ?? 'png').toLowerCase();
-    const path = `${user.id}/logo.${ext}`;
-    const { error: upErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
-    if (upErr) {
+    try {
+      // Se reduce a 256px y se guarda como data URL en el perfil (sin Storage ni bucket).
+      const dataUrl = await resizeImageToDataUrl(file, 256);
+      const { error } = await supabase.from('profiles').update({ logo_url: dataUrl }).eq('id', user.id);
+      if (error) {
+        toast(error.message, 'error');
+        return;
+      }
+      if (profile) setProfile({ ...profile, logo_url: dataUrl });
+      toast('Logo actualizado', 'success');
+    } catch {
+      toast('No se pudo procesar la imagen', 'error');
+    } finally {
       setUploadingLogo(false);
-      toast('No se pudo subir. ¿Creaste el bucket público "logos" en Supabase?', 'error');
-      return;
     }
-    const { data } = supabase.storage.from('logos').getPublicUrl(path);
-    const url = `${data.publicUrl}?t=${Date.now()}`;
-    await supabase.from('profiles').update({ logo_url: url }).eq('id', user.id);
-    if (profile) setProfile({ ...profile, logo_url: url });
-    setUploadingLogo(false);
-    toast('Logo actualizado', 'success');
   }
 
   return (

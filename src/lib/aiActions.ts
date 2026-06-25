@@ -18,6 +18,14 @@ const KNOWN_ACTIONS = [
   'update_mrr_goal',
 ];
 
+/** Convierte una fecha de la IA a ISO sin desfase: fecha sola = medianoche LOCAL. */
+function toTaskISO(s?: string | null): string | null {
+  if (!s) return null;
+  const str = /^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s}T00:00:00` : s;
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 /** Intenta extraer una acción JSON del texto crudo de Gemini. Devuelve null si no es una acción. */
 export function parseAction(raw: string): AIAction | null {
   const text = raw.trim();
@@ -106,41 +114,53 @@ export function describeAction(a: AIAction): { title: string; lines: string[] } 
 /** Ejecuta la acción contra Supabase. Devuelve un mensaje de resultado para el chat. */
 export async function executeAction(
   a: AIAction,
-  ctx: { userId: string; members: TeamMember[] }
+  ctx: { userId: string; members: TeamMember[]; ownerEmail?: string }
 ): Promise<string> {
+  // Resuelve el miembro del equipo por id o por nombre.
+  const resolveMember = (t: any): TeamMember | undefined => {
+    if (t.assigned_member_id) return ctx.members.find((m) => m.id === t.assigned_member_id);
+    if (t.assigned_member_name) {
+      const name = String(t.assigned_member_name).toLowerCase();
+      return ctx.members.find((m) => m.name?.toLowerCase() === name);
+    }
+    return undefined;
+  };
+
   switch (a.action) {
     case 'create_tasks': {
       const tasks = Array.isArray(a.tasks) ? a.tasks : [];
       const rows = tasks.map((t: any) => {
+        const member = resolveMember(t);
         const row: Record<string, unknown> = {
           user_id: ctx.userId,
           title: t.title,
           client_id: t.client_id ?? null,
           category: t.category ?? 'other',
           priority: t.priority ?? 'medium',
-          due_date: t.due_date ? new Date(t.due_date).toISOString() : null,
+          due_date: toTaskISO(t.due_date),
           description: t.description ?? null,
           created_via: 'ai_suggestion',
         };
-        if (t.assigned_member_id) row.assigned_member_id = t.assigned_member_id;
+        if (member?.id) row.assigned_member_id = member.id;
         return row;
       });
       const { error } = await supabase.from('tasks').insert(rows);
       if (error) return `No pude crear las tareas: ${error.message}`;
 
-      // Delegación: notificar por email a los responsables asignados.
+      // Delegación: notificar por email a los responsables asignados (pidiendo respuesta).
       let notified = 0;
       for (const t of tasks) {
-        const member = ctx.members.find((m) => m.id === t.assigned_member_id);
+        const member = resolveMember(t);
         if (member?.email) {
           const res = await sendEmail({
             to: member.email,
+            replyTo: ctx.ownerEmail,
             subject: `Nueva tarea asignada: ${t.title}`,
             html: emailTemplate({
               title: 'Tienes una nueva tarea',
-              body: `<b>${t.title}</b><br/>${t.due_date ? `Para el ${t.due_date}.<br/>` : ''}${
+              body: `<b>${t.title}</b><br/>${t.due_date ? `Para: ${t.due_date}<br/>` : ''}${
                 t.description ?? ''
-              }`,
+              }<br/><br/><b>Responde a este correo</b> confirmando que la recibiste, o pide reprogramación si lo necesitas.`,
               footer: 'Asignada desde DUO Community',
             }),
           });
@@ -153,7 +173,7 @@ export async function executeAction(
     case 'update_task': {
       if (!a.task_id) return 'No identifiqué qué tarea actualizar.';
       const changes: Record<string, unknown> = { ...(a.changes ?? {}) };
-      if (typeof changes.due_date === 'string') changes.due_date = new Date(changes.due_date).toISOString();
+      if (typeof changes.due_date === 'string') changes.due_date = toTaskISO(changes.due_date as string);
       if (changes.status === 'done') changes.completed_at = new Date().toISOString();
       const { error } = await supabase.from('tasks').update(changes).eq('id', a.task_id).eq('user_id', ctx.userId);
       if (error) return `No pude actualizar la tarea: ${error.message}`;

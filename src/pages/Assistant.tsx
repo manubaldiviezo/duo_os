@@ -280,6 +280,7 @@ export function Assistant() {
     const result = await executeAction(pending.action, {
       userId: user.id,
       members,
+      ownerEmail: user.email ?? undefined,
     });
 
     if (pending.action.action === 'update_mrr_goal' && profile) {

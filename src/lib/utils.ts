@@ -114,6 +114,35 @@ export function localDateTimeToISO(dateStr: string, timeStr?: string): string {
   return new Date(`${dateStr}T${t}:00`).toISOString();
 }
 
+/** Lee una imagen, la reduce a un máximo de lado y devuelve un data URL (PNG). */
+export function resizeImageToDataUrl(file: File, max = 256): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('no-canvas'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => reject(new Error('img-error'));
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => reject(new Error('read-error'));
+    reader.readAsDataURL(file);
+  });
+}
+
 /**
  * Aclara (amount > 0) u oscurece (amount < 0) un color hex.
  * amount va de -1 (negro) a 1 (blanco).

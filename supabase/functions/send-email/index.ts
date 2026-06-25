@@ -21,7 +21,7 @@ serve(async (req) => {
     });
 
   try {
-    const { to, subject, html } = await req.json();
+    const { to, subject, html, replyTo } = await req.json();
     if (!to || !subject || !html) {
       return json({ error: 'Faltan campos requeridos: to, subject, html' });
     }
@@ -33,7 +33,7 @@ serve(async (req) => {
 
     // Debe ser un remitente de un dominio verificado en Resend.
     // Para pruebas, Resend permite 'onboarding@resend.dev' hacia tu propio correo.
-    const from = Deno.env.get('RESEND_FROM') ?? 'DUO OS <onboarding@resend.dev>';
+    const from = Deno.env.get('RESEND_FROM') ?? 'DUO Community <onboarding@resend.dev>';
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -46,6 +46,7 @@ serve(async (req) => {
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
 

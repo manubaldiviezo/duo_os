@@ -4,6 +4,8 @@ export interface SendEmailParams {
   to: string | string[];
   subject: string;
   html: string;
+  /** Correo al que se responde (ej. el de la agencia) cuando el destinatario contesta. */
+  replyTo?: string;
 }
 
 /**

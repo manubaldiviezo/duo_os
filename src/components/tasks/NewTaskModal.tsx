@@ -126,12 +126,14 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
     const assignmentChanged = !isEdit || (task && task.assigned_member_id !== memberId);
 
     if (member?.email && memberId && assignmentChanged) {
+      const cuando = dueDate ? `${dueDate}${startTime ? ` ${startTime}` : ''}` : '';
       const res = await sendEmail({
         to: member.email,
+        replyTo: user.email ?? undefined,
         subject: `Tarea asignada: ${title.trim()}`,
         html: emailTemplate({
           title: 'Tienes una tarea asignada',
-          body: `<b>${title.trim()}</b><br/>${dueDate ? `Para el ${dueDate}.<br/>` : ''}${description.trim() || ''}`,
+          body: `<b>${title.trim()}</b><br/>${cuando ? `Para: ${cuando}<br/>` : ''}${description.trim() || ''}<br/><br/><b>Responde a este correo</b> confirmando que la recibiste, o pide reprogramación si lo necesitas.`,
           footer: 'Asignada desde DUO Community',
         }),
       });
