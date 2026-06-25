@@ -8,6 +8,7 @@ import {
   IconPencilPlus,
   IconCheck,
   IconX,
+  IconTrash,
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -40,6 +41,8 @@ interface SessionRow {
   title: string | null;
   updated_at: string;
 }
+
+const MAX_SAVED_CHATS = 20;
 
 const START_PROMPT =
   'Ayúdame a configurar mi agencia en DUO Community desde cero. Primero explícame en pasos simples qué datos debo cargar. Luego guíame para agregar múltiples clientes, tareas, gastos o reuniones por bloques. No crees ni edites nada todavía sin mostrarme un resumen y pedirme confirmación.';
@@ -76,6 +79,7 @@ export function Assistant() {
   const { user, profile } = useAuthStore();
   const navigate = useNavigate();
   const toast = useUIStore((s) => s.toast);
+
   const [usage, setUsage] = useState(0);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
@@ -85,6 +89,8 @@ export function Assistant() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [showSessions, setShowSessions] = useState(false);
+  const [hasStartedBefore, setHasStartedBefore] = useState(false);
+
   const { isRecording, transcript, supported, start, stop } = useVoice();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -94,11 +100,17 @@ export function Assistant() {
 
   useEffect(() => {
     if (!user) return;
+
     supabase
       .from('team_members')
       .select('*')
       .eq('user_id', user.id)
       .then(({ data }) => setMembers((data as TeamMember[]) ?? []));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    void loadSessions();
   }, [user]);
 
   // Uso de IA del mes con reseteo mensual.
@@ -114,6 +126,42 @@ export function Assistant() {
     if (isRecording) setInput(transcript);
   }, [transcript, isRecording]);
 
+  async function loadSessions() {
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('ai_conversations')
+      .select('id, title, updated_at')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(MAX_SAVED_CHATS);
+
+    const rows = (data as SessionRow[]) ?? [];
+
+    setSessions(rows);
+    setHasStartedBefore(rows.length > 0);
+  }
+
+  async function cleanupOldChats() {
+    if (!user) return;
+
+    const { data: all } = await supabase
+      .from('ai_conversations')
+      .select('id')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false });
+
+    if (all && all.length > MAX_SAVED_CHATS) {
+      await supabase
+        .from('ai_conversations')
+        .delete()
+        .in(
+          'id',
+          all.slice(MAX_SAVED_CHATS).map((r: any) => r.id)
+        );
+    }
+  }
+
   async function persist(msgs: Msg[]): Promise<void> {
     if (!user) return;
 
@@ -128,26 +176,20 @@ export function Assistant() {
 
       if (data?.id) setConversationId(data.id);
 
-      // Limitar chats guardados según el plan.
-      const cap = PLANS[(profile?.plan ?? 'free') as Plan].savedChats;
-
-      const { data: all } = await supabase
-        .from('ai_conversations')
-        .select('id')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
-
-      if (all && all.length > cap) {
-        await supabase
-          .from('ai_conversations')
-          .delete()
-          .in(
-            'id',
-            all.slice(cap).map((r: any) => r.id)
-          );
-      }
+      setHasStartedBefore(true);
+      await cleanupOldChats();
+      await loadSessions();
     } else {
-      await supabase.from('ai_conversations').update({ messages: msgs }).eq('id', conversationId);
+      await supabase
+        .from('ai_conversations')
+        .update({
+          messages: msgs,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conversationId);
+
+      setHasStartedBefore(true);
+      await loadSessions();
     }
   }
 
@@ -239,16 +281,7 @@ export function Assistant() {
   }
 
   async function openSessions() {
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('ai_conversations')
-      .select('id, title, updated_at')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(20);
-
-    setSessions((data as SessionRow[]) ?? []);
+    await loadSessions();
     setShowSessions(true);
   }
 
@@ -265,10 +298,36 @@ export function Assistant() {
     setShowSessions(false);
   }
 
+  async function deleteSession(session: SessionRow) {
+    if (!user) return;
+
+    const confirmDelete = window.confirm('¿Quieres eliminar esta conversación?');
+
+    if (!confirmDelete) return;
+
+    await supabase
+      .from('ai_conversations')
+      .delete()
+      .eq('id', session.id)
+      .eq('user_id', user.id);
+
+    if (conversationId === session.id) {
+      setMessages([]);
+      setConversationId(null);
+      setPending(null);
+    }
+
+    toast('Conversación eliminada', 'success');
+    await loadSessions();
+  }
+
   function micClick() {
     if (isRecording) stop();
     else start();
   }
+
+  const showStartSetup = messages.length === 0 && !thinking && !pending && !hasStartedBefore;
+  const showRegularSuggestions = messages.length === 0 && !thinking && !pending && hasStartedBefore;
 
   return (
     <div className="flex h-[calc(100vh-84px)] flex-col">
@@ -297,17 +356,16 @@ export function Assistant() {
       />
 
       <div ref={scrollRef} className="no-scrollbar flex-1 space-y-3 overflow-y-auto px-5 py-3">
-        {messages.length === 0 && !thinking && !pending && (
+        {showStartSetup && (
           <div className="flex flex-col items-center gap-4 pt-8 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-l">
               <IconSparkles size={30} className="text-brand" />
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-ios-text">¿Qué quieres hacer ahora?</h2>
+              <h2 className="text-lg font-semibold text-ios-text">Configura tu agencia</h2>
               <p className="mt-1 max-w-xs text-sm text-ios-text-3">
-                Puedes configurar tu agencia, crear tareas, agendar reuniones, cargar clientes o
-                registrar pagos usando texto o voz.
+                Empecemos cargando la información base de tu operación: clientes, tareas, reuniones y finanzas.
               </p>
             </div>
 
@@ -317,9 +375,24 @@ export function Assistant() {
             >
               🚀 Comenzar a configurar mi agencia en DUO
               <span className="mt-1 block text-xs font-normal text-white/80">
-                Ideal si estás entrando por primera vez.
+                Recomendado para tu primer uso.
               </span>
             </button>
+          </div>
+        )}
+
+        {showRegularSuggestions && (
+          <div className="flex flex-col items-center gap-4 pt-8 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-l">
+              <IconSparkles size={30} className="text-brand" />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-ios-text">¿Qué quieres hacer ahora?</h2>
+              <p className="mt-1 max-w-xs text-sm text-ios-text-3">
+                Puedes crear tareas, agendar reuniones, cargar clientes o registrar pagos usando texto o voz.
+              </p>
+            </div>
 
             <div className="grid w-full gap-2">
               {SUGGESTIONS.map((s) => (
@@ -436,18 +509,24 @@ export function Assistant() {
         ) : (
           <div className="space-y-2">
             {sessions.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => loadSession(s)}
-                className="w-full rounded-xl bg-ios-bg px-4 py-3 text-left"
-              >
-                <p className="truncate text-sm font-medium text-ios-text">
-                  {s.title ?? 'Conversación'}
-                </p>
-                <p className="text-xs text-ios-text-3">
-                  {new Date(s.updated_at).toLocaleDateString('es-BO')}
-                </p>
-              </button>
+              <div key={s.id} className="flex items-center gap-2 rounded-xl bg-ios-bg px-3 py-2">
+                <button onClick={() => loadSession(s)} className="min-w-0 flex-1 py-1 text-left">
+                  <p className="truncate text-sm font-medium text-ios-text">
+                    {s.title ?? 'Conversación'}
+                  </p>
+                  <p className="text-xs text-ios-text-3">
+                    {new Date(s.updated_at).toLocaleDateString('es-BO')}
+                  </p>
+                </button>
+
+                <button
+                  onClick={() => deleteSession(s)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ios-card text-ios-red"
+                  aria-label="Eliminar conversación"
+                >
+                  <IconTrash size={18} />
+                </button>
+              </div>
             ))}
           </div>
         )}
