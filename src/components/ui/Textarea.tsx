@@ -6,6 +6,7 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 export function Textarea({ label, className, id, ...props }: TextareaProps) {
   const inputId = id ?? props.name;
+
   return (
     <div className="w-full">
       {label && (
@@ -13,11 +14,12 @@ export function Textarea({ label, className, id, ...props }: TextareaProps) {
           {label}
         </label>
       )}
+
       <textarea
         id={inputId}
         rows={3}
         className={cn(
-          'w-full resize-none rounded-xl bg-ios-bg px-4 py-3 text-sm text-ios-text outline-none',
+          'w-full resize-none rounded-xl bg-ios-bg px-4 py-3 text-base text-ios-text outline-none',
           'placeholder:text-ios-text-3 focus:ring-2 focus:ring-brand/40',
           className
         )}
