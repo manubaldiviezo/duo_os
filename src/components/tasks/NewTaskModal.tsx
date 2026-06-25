@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { sendEmail, emailTemplate } from '@/lib/email';
+import { toLocalDateInput, toLocalTimeInput, localDateTimeToISO, hasTime } from '@/lib/utils';
 import type { Client, Task, TaskCategory, TaskPriority, TeamMember } from '@/types/app.types';
 
 const CATEGORIES: { value: TaskCategory; label: string }[] = [
@@ -51,6 +52,8 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
   const [category, setCategory] = useState<TaskCategory>('other');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [dueDate, setDueDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -75,7 +78,9 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
       setMemberId(task.assigned_member_id ?? '');
       setCategory(task.category);
       setPriority(task.priority);
-      setDueDate(task.due_date ? new Date(task.due_date).toISOString().slice(0, 10) : '');
+      setDueDate(task.due_date ? toLocalDateInput(task.due_date) : '');
+      setStartTime(task.due_date && hasTime(task.due_date) ? toLocalTimeInput(task.due_date) : '');
+      setEndTime(task.due_end ? toLocalTimeInput(task.due_end) : '');
     } else {
       setTitle('');
       setDescription('');
@@ -84,6 +89,8 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
       setCategory('other');
       setPriority('medium');
       setDueDate('');
+      setStartTime('');
+      setEndTime('');
     }
   }, [open, user, defaultClientId, task]);
 
@@ -102,7 +109,9 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
       assigned_member_id: memberId || null,
       category,
       priority,
-      due_date: dueDate ? new Date(dueDate).toISOString() : null,
+      // Fecha + hora opcional como hora LOCAL (sin desfase de zona horaria).
+      due_date: dueDate ? localDateTimeToISO(dueDate, startTime) : null,
+      due_end: dueDate && endTime ? localDateTimeToISO(dueDate, endTime) : null,
     };
 
     let error;
@@ -207,7 +216,24 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
           </div>
         )}
 
-        <Input label="Fecha límite" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        <Input label="Fecha (opcional)" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+
+        {dueDate && (
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Hora inicio (opcional)"
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+            />
+            <Input
+              label="Hora fin (opcional)"
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="sticky bottom-0 z-10 -mx-1 bg-ios-card pb-1 pt-3">
