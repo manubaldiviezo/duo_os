@@ -17,30 +17,84 @@ export function Finance() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
+
     const monthStart = new Date(new Date().setDate(1)).toISOString().split('T')[0];
-    const { data } = await supabase
+
+    const { data, error } = await supabase
       .from('transactions')
       .select('*, client:clients(name)')
       .eq('user_id', user.id)
       .gte('date', monthStart)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast(error.message, 'error');
+    }
+
     setTransactions((data as Transaction[]) ?? []);
     setLoading(false);
-  }, [user]);
+  }, [toast, user]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  function openNewTransaction() {
+    setEditingTransaction(null);
+    setShowNew(true);
+  }
+
+  function closeTransactionModal() {
+    setShowNew(false);
+    setEditingTransaction(null);
+  }
+
+  function editTransaction(tx: Transaction) {
+    setEditingTransaction(tx);
+    setShowNew(true);
+  }
+
   async function markPaid(tx: Transaction) {
-    await supabase
+    if (!user) return;
+
+    const { error } = await supabase
       .from('transactions')
       .update({ type: 'income', date: new Date().toISOString().split('T')[0] })
-      .eq('id', tx.id);
+      .eq('id', tx.id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast(error.message, 'error');
+      return;
+    }
+
     toast('Pago marcado como cobrado', 'success');
+    load();
+  }
+
+  async function deleteTransaction(tx: Transaction) {
+    if (!user) return;
+
+    const ok = window.confirm('¿Seguro que quieres eliminar este movimiento? Esta acción no se puede deshacer.');
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', tx.id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast(error.message, 'error');
+      return;
+    }
+
+    toast('Movimiento eliminado', 'success');
     load();
   }
 
@@ -57,8 +111,9 @@ export function Finance() {
         subtitle="Mes en curso"
         right={
           <button
-            onClick={() => setShowNew(true)}
+            onClick={openNewTransaction}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-white"
+            aria-label="Nuevo movimiento"
           >
             <IconPlus size={20} />
           </button>
@@ -73,6 +128,7 @@ export function Finance() {
         ) : (
           <>
             <FinanceSummary received={received} pending={pending} expenses={expenses} />
+
             {transactions.length === 0 ? (
               <EmptyState
                 icon={IconCash}
@@ -82,14 +138,24 @@ export function Finance() {
             ) : (
               <section>
                 <h2 className="mb-2 text-sm font-semibold text-ios-text-2">Movimientos</h2>
-                <TransactionList transactions={transactions} onMarkPaid={markPaid} />
+                <TransactionList
+                  transactions={transactions}
+                  onMarkPaid={markPaid}
+                  onEdit={editTransaction}
+                  onDelete={deleteTransaction}
+                />
               </section>
             )}
           </>
         )}
       </div>
 
-      <NewTransactionModal open={showNew} onClose={() => setShowNew(false)} onCreated={load} />
+      <NewTransactionModal
+        open={showNew}
+        onClose={closeTransactionModal}
+        onCreated={load}
+        transactionToEdit={editingTransaction}
+      />
     </div>
   );
 }

@@ -76,7 +76,7 @@ const SUGGESTIONS = [
 ];
 
 export function Assistant() {
-  const { user, profile } = useAuthStore();
+  const { user, profile, setProfile } = useAuthStore();
   const navigate = useNavigate();
   const toast = useUIStore((s) => s.toast);
 
@@ -257,6 +257,13 @@ export function Assistant() {
       userId: user.id,
       members,
     });
+
+    if (pending.action.action === 'update_mrr_goal' && profile) {
+      const nextGoal = Number(pending.action.mrr_goal ?? pending.action.goal);
+      if (Number.isFinite(nextGoal)) {
+        setProfile({ ...profile, mrr_goal: nextGoal });
+      }
+    }
 
     const next: Msg[] = [...messages, { role: 'model', text: result }];
 
