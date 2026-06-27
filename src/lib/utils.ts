@@ -14,7 +14,11 @@ export function formatCurrency(amount: number, currency = 'USD'): string {
 
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return '—';
-  const d = typeof date === 'string' ? new Date(date) : date;
+  // Una fecha "solo-día" (YYYY-MM-DD) se interpreta como LOCAL para no restar un día.
+  const d =
+    typeof date === 'string'
+      ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T00:00:00` : date)
+      : date;
   return d.toLocaleDateString('es-BO', { day: '2-digit', month: 'short' });
 }
 

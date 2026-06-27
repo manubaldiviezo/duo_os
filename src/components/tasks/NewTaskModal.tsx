@@ -111,8 +111,9 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
       priority,
       // Fecha + hora opcional como hora LOCAL (sin desfase de zona horaria).
       due_date: dueDate ? localDateTimeToISO(dueDate, startTime) : null,
-      due_end: dueDate && endTime ? localDateTimeToISO(dueDate, endTime) : null,
     };
+    // Solo se envía due_end si hay hora fin (la columna requiere la migración 007).
+    if (dueDate && endTime) payload.due_end = localDateTimeToISO(dueDate, endTime);
 
     let error;
 
