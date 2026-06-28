@@ -122,7 +122,7 @@ export function Plans() {
         <Card className="space-y-3">
           <h2 className="text-sm font-semibold text-ios-text-2">¿Tienes un código de acceso?</h2>
           <div className="flex gap-2">
-            <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ej. APPDUO" />
+            <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Ingresa tu código de acceso" />
             <Button loading={redeeming} onClick={redeem}>
               Canjear
             </Button>
