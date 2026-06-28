@@ -3,11 +3,31 @@ export async function sendEmailServer(
   to: string | string[],
   subject: string,
   html: string,
-  replyTo?: string
+  replyTo?: string,
+  fromName?: string
 ): Promise<{ ok: boolean; error?: string }> {
   const apiKey = Deno.env.get('RESEND_API_KEY');
   if (!apiKey) return { ok: false, error: 'RESEND_API_KEY no configurada' };
-  const from = Deno.env.get('RESEND_FROM') ?? 'DUO Community <onboarding@resend.dev>';
+  const base = Deno.env.get('RESEND_FROM') ?? 'DUO Community <onboarding@resend.dev>';
+
+  // Nombre de remitente personalizado conservando la dirección verificada.
+  let from = base;
+  if (fromName) {
+    const m = base.match(/<([^>]+)>/);
+    const address = m ? m[1] : base;
+    const safe = String(fromName).replace(/[<>"]/g, '').trim();
+    if (safe) from = `${safe} <${address}>`;
+  }
+
+  // Texto plano para reducir clasificación como boletín.
+  const text = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -17,6 +37,7 @@ export async function sendEmailServer(
       to: Array.isArray(to) ? to : [to],
       subject,
       html,
+      text,
       ...(replyTo ? { reply_to: replyTo } : {}),
     }),
   });

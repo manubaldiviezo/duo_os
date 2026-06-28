@@ -40,6 +40,7 @@ const selectClass =
 
 export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }: NewTaskModalProps) {
   const user = useAuthStore((s) => s.user);
+  const profile = useAuthStore((s) => s.profile);
   const toast = useUIStore((s) => s.toast);
   const isEdit = Boolean(task);
 
@@ -140,6 +141,7 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
       const res = await sendEmail({
         to: member.email,
         replyTo: user.email ?? undefined,
+        fromName: profile?.agency_name ?? undefined,
         subject: `Tarea asignada: ${title.trim()}`,
         html: emailTemplate({
           title: 'Tienes una tarea asignada',

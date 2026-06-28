@@ -6,6 +6,8 @@ export interface SendEmailParams {
   html: string;
   /** Correo al que se responde (ej. el de la agencia) cuando el destinatario contesta. */
   replyTo?: string;
+  /** Nombre visible del remitente (ej. nombre de la agencia). Ayuda a caer en "Principal". */
+  fromName?: string;
 }
 
 /**

@@ -122,7 +122,7 @@ export function describeAction(a: AIAction): { title: string; lines: string[] } 
 /** Ejecuta la acción contra Supabase. Devuelve un mensaje de resultado para el chat. */
 export async function executeAction(
   a: AIAction,
-  ctx: { userId: string; members: TeamMember[]; ownerEmail?: string }
+  ctx: { userId: string; members: TeamMember[]; ownerEmail?: string; agencyName?: string }
 ): Promise<string> {
   // Resuelve el miembro del equipo por id o por nombre.
   const resolveMember = (t: any): TeamMember | undefined => {
@@ -163,6 +163,7 @@ export async function executeAction(
           const res = await sendEmail({
             to: member.email,
             replyTo: ctx.ownerEmail,
+            fromName: ctx.agencyName,
             subject: `Nueva tarea asignada: ${t.title}`,
             html: emailTemplate({
               title: 'Tienes una nueva tarea',
@@ -206,6 +207,7 @@ export async function executeAction(
       const res = await sendEmail({
         to: member.email,
         replyTo: ctx.ownerEmail,
+        fromName: ctx.agencyName,
         subject: `Recordatorio de tarea: ${task.title}`,
         html: emailTemplate({
           title: 'Recordatorio de tarea',

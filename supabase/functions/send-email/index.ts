@@ -21,7 +21,7 @@ serve(async (req) => {
     });
 
   try {
-    const { to, subject, html, replyTo } = await req.json();
+    const { to, subject, html, replyTo, fromName, text } = await req.json();
     if (!to || !subject || !html) {
       return json({ error: 'Faltan campos requeridos: to, subject, html' });
     }
@@ -31,9 +31,29 @@ serve(async (req) => {
       return json({ error: 'RESEND_API_KEY no está configurada en Supabase' });
     }
 
-    // Debe ser un remitente de un dominio verificado en Resend.
-    // Para pruebas, Resend permite 'onboarding@resend.dev' hacia tu propio correo.
-    const from = Deno.env.get('RESEND_FROM') ?? 'DUO Community <onboarding@resend.dev>';
+    // Remitente: dominio verificado en Resend. Si llega fromName, se usa como
+    // nombre visible (ej. "DUO · Agencia") conservando la dirección verificada.
+    // Un remitente con nombre de persona/agencia ayuda a caer en "Principal" de Gmail.
+    const base = Deno.env.get('RESEND_FROM') ?? 'DUO Community <onboarding@resend.dev>';
+    const buildFrom = (name?: string) => {
+      if (!name) return base;
+      const m = base.match(/<([^>]+)>/);
+      const address = m ? m[1] : base;
+      const safe = String(name).replace(/[<>"]/g, '').trim();
+      return safe ? `${safe} <${address}>` : base;
+    };
+
+    // Versión texto plano: los correos 1:1 reales siempre la traen; reduce que
+    // Gmail lo trate como boletín y lo mande a "Notificaciones/Promociones".
+    const htmlToText = (h: string) =>
+      h
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(p|div|h[1-6])>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -42,10 +62,11 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from,
+        from: buildFrom(fromName),
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
+        text: text || htmlToText(html),
         ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });

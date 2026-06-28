@@ -35,6 +35,16 @@ serve(async () => {
     return email;
   };
 
+  // Cache del nombre de la agencia por user_id, para el remitente visible.
+  const agencyCache = new Map<string, string | undefined>();
+  const agencyName = async (userId: string): Promise<string | undefined> => {
+    if (agencyCache.has(userId)) return agencyCache.get(userId);
+    const { data } = await supabase.from('profiles').select('agency_name').eq('id', userId).maybeSingle();
+    const name = data?.agency_name ?? undefined;
+    agencyCache.set(userId, name);
+    return name;
+  };
+
   let count = 0;
   for (const t of tasks ?? []) {
     const member = (t as any).member;
@@ -61,7 +71,8 @@ serve(async () => {
         }),
         footer: 'Recordatorio automático de DUO Community',
       }),
-      await ownerEmail(t.user_id)
+      await ownerEmail(t.user_id),
+      await agencyName(t.user_id)
     );
 
     if (res.ok) {

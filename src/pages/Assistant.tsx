@@ -281,6 +281,7 @@ export function Assistant() {
       userId: user.id,
       members,
       ownerEmail: user.email ?? undefined,
+      agencyName: profile?.agency_name ?? undefined,
     });
 
     if (pending.action.action === 'update_mrr_goal' && profile) {
