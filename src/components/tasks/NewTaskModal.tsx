@@ -6,7 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
-import { sendEmail, emailTemplate } from '@/lib/email';
+import { sendEmail, emailTemplate, taskEmailBody } from '@/lib/email';
 import { toLocalDateInput, toLocalTimeInput, localDateTimeToISO, hasTime } from '@/lib/utils';
 import type { Client, Task, TaskCategory, TaskPriority, TeamMember } from '@/types/app.types';
 
@@ -143,7 +143,12 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
         subject: `Tarea asignada: ${title.trim()}`,
         html: emailTemplate({
           title: 'Tienes una tarea asignada',
-          body: `<b>${title.trim()}</b><br/>${cuando ? `Para: ${cuando}<br/>` : ''}${description.trim() || ''}<br/><br/><b>Responde a este correo</b> confirmando que la recibiste, o pide reprogramación si lo necesitas.`,
+          body: taskEmailBody({
+            taskTitle: title.trim(),
+            when: cuando || null,
+            description: description.trim() || null,
+            kind: 'new',
+          }),
           footer: 'Asignada desde DUO Community',
         }),
       });

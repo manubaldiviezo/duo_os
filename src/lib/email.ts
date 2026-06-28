@@ -33,6 +33,26 @@ export async function sendEmail(params: SendEmailParams): Promise<{ success: boo
 }
 
 /**
+ * Cuerpo estándar para notificar/recordar una tarea a su responsable.
+ * Pide responder al correo (para confirmar/reprogramar) y, al terminar,
+ * responder con la palabra LISTO — base para luego marcarla hecha automáticamente.
+ */
+export function taskEmailBody(opts: {
+  taskTitle: string;
+  when?: string | null;
+  description?: string | null;
+  kind?: 'new' | 'reminder';
+}): string {
+  const intro =
+    opts.kind === 'reminder'
+      ? 'Recordatorio: esta tarea vence pronto.'
+      : 'Se te asignó esta tarea.';
+  return `${intro}<br/><br/><b>${opts.taskTitle}</b><br/>${
+    opts.when ? `Para: ${opts.when}<br/>` : ''
+  }${opts.description ? `${opts.description}<br/>` : ''}<br/><b>Responde a este correo</b> para confirmar que la recibiste o pedir reprogramación.<br/>Cuando la termines, responde con la palabra <b>LISTO</b> y la daremos por completada.`;
+}
+
+/**
  * Plantilla sobria y "personal" para los correos.
  * Evita banners de color, imágenes y lenguaje de boletín: eso hace que Gmail
  * lo clasifique como correo 1:1 (pestaña Principal) y no en "Actualizaciones".

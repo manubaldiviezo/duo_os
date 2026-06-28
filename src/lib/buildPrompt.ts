@@ -84,6 +84,14 @@ SOLO un objeto JSON válido (sin texto antes/después). El usuario confirmará a
   "confirmation_message": "Voy a actualizar esa tarea. ¿Confirmas?"
 }
 
+2b) Reenviar/recordar una tarea YA asignada a su responsable por correo (usa el id de la lista de tareas del contexto):
+{
+  "action": "notify_task",
+  "task_id": "uuid",
+  "task_title": "string (el título, para mostrarlo en la confirmación)",
+  "confirmation_message": "Voy a reenviarle el recordatorio de esta tarea a su responsable. ¿Confirmas?"
+}
+
 3) Crear un cliente:
 {
   "action": "create_client",
@@ -138,6 +146,7 @@ Reglas para extracción (MUY IMPORTANTES):
 - Si te faltan datos para una acción, NO la ejecutes: responde en TEXTO pidiendo el dato que falta.
 - Si el usuario pide un "reporte de hoy", "briefing", o "tareas de la semana", respóndele en TEXTO (no es una acción) usando los datos del contexto: prioridades, vencidas, reuniones, cobros y MRR.
 - Si menciona un cliente o un responsable por nombre, busca el match en las listas del contexto y usa su id (y su nombre exacto en assigned_member_name).
+- Si el usuario dice "recuérdale a X su tarea", "vuelve a notificar", "reenvía esa tarea" o similar, usa notify_task con el task_id de esa tarea (búscalo en las listas de tareas vencidas o de la semana del contexto).
 - Si menciona "mañana", "viernes", etc., calcula la fecha real (YYYY-MM-DD). Hoy es {{CURRENT_DATE}}.
 - Si no especifica prioridad usa "medium", salvo "urgente" -> "high".
 - Solo incluye en "changes" los campos que el usuario realmente pidió cambiar.

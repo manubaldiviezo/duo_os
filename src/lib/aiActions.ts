@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
-import { sendEmail, emailTemplate } from './email';
+import { sendEmail, emailTemplate, taskEmailBody } from './email';
+import { formatTaskWhen } from './utils';
 import type { TeamMember } from '@/types/app.types';
 
 export interface AIAction {
@@ -10,6 +11,7 @@ export interface AIAction {
 const KNOWN_ACTIONS = [
   'create_tasks',
   'update_task',
+  'notify_task',
   'create_client',
   'create_clients',
   'update_client',
@@ -60,6 +62,12 @@ export function describeAction(a: AIAction): { title: string; lines: string[] } 
       return {
         title: 'Actualizar una tarea',
         lines: Object.entries(changes).map(([k, v]) => `• ${k}: ${v}`),
+      };
+    }
+    case 'notify_task': {
+      return {
+        title: 'Reenviar recordatorio de tarea',
+        lines: [a.task_title && `• ${a.task_title}`].filter(Boolean) as string[],
       };
     }
     case 'create_client': {
@@ -158,9 +166,12 @@ export async function executeAction(
             subject: `Nueva tarea asignada: ${t.title}`,
             html: emailTemplate({
               title: 'Tienes una nueva tarea',
-              body: `<b>${t.title}</b><br/>${t.due_date ? `Para: ${t.due_date}<br/>` : ''}${
-                t.description ?? ''
-              }<br/><br/><b>Responde a este correo</b> confirmando que la recibiste, o pide reprogramación si lo necesitas.`,
+              body: taskEmailBody({
+                taskTitle: t.title,
+                when: t.due_date ?? null,
+                description: t.description ?? null,
+                kind: 'new',
+              }),
               footer: 'Asignada desde DUO Community',
             }),
           });
@@ -178,6 +189,38 @@ export async function executeAction(
       const { error } = await supabase.from('tasks').update(changes).eq('id', a.task_id).eq('user_id', ctx.userId);
       if (error) return `No pude actualizar la tarea: ${error.message}`;
       return 'Tarea actualizada.';
+    }
+
+    case 'notify_task': {
+      if (!a.task_id) return 'No identifiqué qué tarea recordar.';
+      const { data: task, error } = await supabase
+        .from('tasks')
+        .select('id, title, description, due_date, due_end, assigned_member_id')
+        .eq('id', a.task_id)
+        .eq('user_id', ctx.userId)
+        .maybeSingle();
+      if (error || !task) return 'No encontré esa tarea.';
+      const member = ctx.members.find((m) => m.id === task.assigned_member_id);
+      if (!member?.email) return 'Esa tarea no tiene un responsable con correo asignado.';
+      const when = task.due_date ? formatTaskWhen(task.due_date, task.due_end) : null;
+      const res = await sendEmail({
+        to: member.email,
+        replyTo: ctx.ownerEmail,
+        subject: `Recordatorio de tarea: ${task.title}`,
+        html: emailTemplate({
+          title: 'Recordatorio de tarea',
+          body: taskEmailBody({
+            taskTitle: task.title,
+            when,
+            description: task.description,
+            kind: 'reminder',
+          }),
+          footer: 'DUO Community',
+        }),
+      });
+      return res.success
+        ? `Le reenvié el recordatorio a ${member.name}.`
+        : `No pude enviar el correo: ${res.error}`;
     }
 
     case 'create_client': {
