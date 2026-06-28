@@ -6,6 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
+import { Toggle } from '@/components/ui/Toggle';
 import { sendEmail, emailTemplate, taskEmailBody } from '@/lib/email';
 import { toLocalDateInput, toLocalTimeInput, localDateTimeToISO, hasTime } from '@/lib/utils';
 import type { Client, Task, TaskCategory, TaskPriority, TeamMember } from '@/types/app.types';
@@ -55,6 +56,7 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
   const [dueDate, setDueDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [notifyAssignee, setNotifyAssignee] = useState(true);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -82,6 +84,7 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
       setDueDate(task.due_date ? toLocalDateInput(task.due_date) : '');
       setStartTime(task.due_date && hasTime(task.due_date) ? toLocalTimeInput(task.due_date) : '');
       setEndTime(task.due_end ? toLocalTimeInput(task.due_end) : '');
+      setNotifyAssignee(true);
     } else {
       setTitle('');
       setDescription('');
@@ -92,6 +95,7 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
       setDueDate('');
       setStartTime('');
       setEndTime('');
+      setNotifyAssignee(true);
     }
   }, [open, user, defaultClientId, task]);
 
@@ -103,6 +107,9 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
 
     setLoading(true);
 
+    const newDue = dueDate ? localDateTimeToISO(dueDate, startTime) : null;
+    const newEnd = dueDate && endTime ? localDateTimeToISO(dueDate, endTime) : null;
+
     const payload: Record<string, unknown> = {
       title: title.trim(),
       description: description.trim() || null,
@@ -111,10 +118,10 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
       category,
       priority,
       // Fecha + hora opcional como hora LOCAL (sin desfase de zona horaria).
-      due_date: dueDate ? localDateTimeToISO(dueDate, startTime) : null,
+      due_date: newDue,
     };
     // Solo se envía due_end si hay hora fin (la columna requiere la migración 007).
-    if (dueDate && endTime) payload.due_end = localDateTimeToISO(dueDate, endTime);
+    if (newEnd) payload.due_end = newEnd;
 
     let error;
 
@@ -134,24 +141,56 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
     }
 
     const member = members.find((m) => m.id === memberId);
-    const assignmentChanged = !isEdit || (task && task.assigned_member_id !== memberId);
 
-    if (member?.email && memberId && assignmentChanged) {
+    // ¿Cambió el responsable o la fecha/hora respecto a la tarea original?
+    const sameTime = (a?: string | null, b?: string | null) => {
+      if (!a && !b) return true;
+      if (!a || !b) return false;
+      return new Date(a).getTime() === new Date(b).getTime();
+    };
+    const assigneeChanged = !isEdit || task?.assigned_member_id !== memberId;
+    const dateChanged =
+      isEdit && (!sameTime(newDue, task?.due_date ?? null) || !sameTime(newEnd, task?.due_end ?? null));
+
+    // En edición, el interruptor manda; al crear, siempre se notifica si hay correo.
+    const wantNotify = isEdit ? notifyAssignee : true;
+    const shouldNotify = Boolean(member?.email && memberId && wantNotify);
+
+    if (shouldNotify && member) {
+      // Tipo de aviso según qué cambió.
+      const kind: 'new' | 'rescheduled' | 'update' = assigneeChanged
+        ? 'new'
+        : dateChanged
+          ? 'rescheduled'
+          : 'update';
+      const subject =
+        kind === 'new'
+          ? `Tarea asignada: ${title.trim()}`
+          : kind === 'rescheduled'
+            ? `Tarea reprogramada: ${title.trim()}`
+            : `Tarea actualizada: ${title.trim()}`;
+      const headerTitle =
+        kind === 'new'
+          ? 'Tienes una tarea asignada'
+          : kind === 'rescheduled'
+            ? 'Tu tarea fue reprogramada'
+            : 'Se actualizó tu tarea';
       const cuando = dueDate ? `${dueDate}${startTime ? ` ${startTime}` : ''}` : '';
+
       const res = await sendEmail({
-        to: member.email,
+        to: member.email!,
         replyTo: user.email ?? undefined,
         fromName: profile?.agency_name ?? undefined,
-        subject: `Tarea asignada: ${title.trim()}`,
+        subject,
         html: emailTemplate({
-          title: 'Tienes una tarea asignada',
+          title: headerTitle,
           body: taskEmailBody({
             taskTitle: title.trim(),
             when: cuando || null,
             description: description.trim() || null,
-            kind: 'new',
+            kind,
           }),
-          footer: 'Asignada desde DUO Community',
+          footer: 'Enviado desde DUO Community',
         }),
       });
 
@@ -239,6 +278,17 @@ export function NewTaskModal({ open, onClose, onCreated, defaultClientId, task }
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
+            />
+          </div>
+        )}
+
+        {isEdit && memberId && members.find((m) => m.id === memberId)?.email && (
+          <div className="rounded-xl bg-ios-bg px-4 py-1">
+            <Toggle
+              checked={notifyAssignee}
+              onChange={setNotifyAssignee}
+              label="Volver a notificar al responsable"
+              description="Le reenvía el correo al guardar (nueva, reprogramada o actualizada según el cambio)."
             />
           </div>
         )}

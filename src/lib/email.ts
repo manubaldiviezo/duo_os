@@ -43,12 +43,16 @@ export function taskEmailBody(opts: {
   taskTitle: string;
   when?: string | null;
   description?: string | null;
-  kind?: 'new' | 'reminder';
+  kind?: 'new' | 'reminder' | 'rescheduled' | 'update';
 }): string {
   const intro =
     opts.kind === 'reminder'
       ? 'Recordatorio: esta tarea vence pronto.'
-      : 'Se te asignó esta tarea.';
+      : opts.kind === 'rescheduled'
+        ? 'Tu tarea fue reprogramada. Esta es la nueva fecha/hora.'
+        : opts.kind === 'update'
+          ? 'Se actualizó una tarea asignada a ti.'
+          : 'Se te asignó esta tarea.';
   return `${intro}<br/><br/><b>${opts.taskTitle}</b><br/>${
     opts.when ? `Para: ${opts.when}<br/>` : ''
   }${opts.description ? `${opts.description}<br/>` : ''}<br/><b>Responde a este correo</b> para confirmar que la recibiste o pedir reprogramación.<br/>Cuando la termines, responde con la palabra <b>LISTO</b> y la daremos por completada.`;
