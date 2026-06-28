@@ -32,13 +32,17 @@ export async function sendEmail(params: SendEmailParams): Promise<{ success: boo
   return { success: true };
 }
 
-/** Plantilla simple y consistente para los correos de DUO OS. */
+/**
+ * Plantilla sobria y "personal" para los correos.
+ * Evita banners de color, imágenes y lenguaje de boletín: eso hace que Gmail
+ * lo clasifique como correo 1:1 (pestaña Principal) y no en "Actualizaciones".
+ */
 export function emailTemplate(opts: { title: string; body: string; footer?: string }): string {
   return `
-  <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1c1c1e">
-    <div style="background:#F2741B;color:#fff;border-radius:14px;padding:18px 20px;font-size:20px;font-weight:700">DUO Community</div>
-    <h2 style="margin:20px 0 8px;font-size:18px">${opts.title}</h2>
-    <div style="font-size:15px;line-height:1.5;color:#3c3c43">${opts.body}</div>
-    <p style="margin-top:24px;font-size:12px;color:#8e8e93">${opts.footer ?? 'Enviado automáticamente por DUO Community'}</p>
+  <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:16px;color:#1c1c1e;font-size:15px;line-height:1.55">
+    <p style="margin:0 0 12px;font-size:16px;font-weight:600;color:#1c1c1e">${opts.title}</p>
+    <div style="color:#1c1c1e">${opts.body}</div>
+    <p style="margin:22px 0 4px;font-size:13px;color:#6b6b70">${opts.footer ?? 'DUO Community'}</p>
+    <p style="margin:0;font-size:12px;color:#9a9a9e">Puedes responder directamente a este correo.</p>
   </div>`;
 }
