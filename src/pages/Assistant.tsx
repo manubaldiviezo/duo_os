@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { PLANS, isFreeExpired, type Plan } from '@/lib/plans';
-import { callGemini, type GeminiHistoryItem } from '@/lib/gemini';
+import { callGeminiStream, type GeminiHistoryItem } from '@/lib/gemini';
 import { buildSystemPrompt } from '@/lib/buildPrompt';
 import { parseAction, describeAction, executeAction, type AIAction } from '@/lib/aiActions';
 import { useVoice } from '@/hooks/useVoice';
@@ -251,11 +251,21 @@ export function Assistant() {
       parts: [{ text: m.text }],
     }));
 
-    const response = await callGemini({
-      systemPrompt,
-      userMessage: text,
-      conversationHistory: history,
-    });
+    // Streaming: el texto va apareciendo en vivo. Si la respuesta es una acción
+    // (empieza con "{"), NO se muestra el JSON crudo: se deja la animación pensando.
+    const response = await callGeminiStream(
+      {
+        systemPrompt,
+        userMessage: text,
+        conversationHistory: history,
+      },
+      (full) => {
+        if (!full.trimStart().startsWith('{')) {
+          setThinking(false);
+          setMessages([...base, { role: 'model', text: full }]);
+        }
+      }
+    );
 
     const replyText = typeof response === 'string' ? response : '';
     const action = parseAction(replyText);
@@ -263,6 +273,8 @@ export function Assistant() {
     setThinking(false);
 
     if (action) {
+      // Era una acción: descartar cualquier texto parcial y mostrar la confirmación.
+      setMessages(base);
       setPending({ action, desc: describeAction(action) });
       await persist(base);
     } else {
