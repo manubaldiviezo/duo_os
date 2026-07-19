@@ -9,11 +9,13 @@ import {
   IconEyeOff,
   IconBulb,
   IconCalendarPlus,
+  IconTrophy,
 } from '@tabler/icons-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { calculateMRR, type MRRResult } from '@/lib/mrr';
 import { greeting, isOverdue, cn } from '@/lib/utils';
+import { celebrate, xpForTask } from '@/lib/game';
 import { TopBar } from '@/components/layout/TopBar';
 import { MRRTracker } from '@/components/dashboard/MRRTracker';
 import { KPIGrid, type KPIItem } from '@/components/dashboard/KPIGrid';
@@ -123,6 +125,7 @@ export function Home() {
       .from('tasks')
       .update({ status: done ? 'pending' : 'done', completed_at: done ? null : new Date().toISOString() })
       .eq('id', task.id);
+    if (!done) celebrate({ xp: xpForTask(task), message: '¡Hecha!' });
     load();
   }
 
@@ -182,6 +185,13 @@ export function Home() {
               aria-label="Reuniones"
             >
               <IconCalendarPlus size={20} />
+            </button>
+            <button
+              onClick={() => navigate('/progreso')}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-ios-card text-ios-text-2"
+              aria-label="Progreso"
+            >
+              <IconTrophy size={20} />
             </button>
             <button
               onClick={() => navigate('/ideas')}

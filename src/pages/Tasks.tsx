@@ -3,6 +3,7 @@ import { IconPlus, IconMicrophone, IconChecklist } from '@tabler/icons-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { isOverdue, cn } from '@/lib/utils';
+import { celebrate, xpForTask } from '@/lib/game';
 import { TopBar } from '@/components/layout/TopBar';
 import { TaskItem } from '@/components/tasks/TaskItem';
 import { NewTaskModal } from '@/components/tasks/NewTaskModal';
@@ -53,6 +54,7 @@ export function Tasks() {
         completed_at: done ? null : new Date().toISOString(),
       })
       .eq('id', task.id);
+    if (!done) celebrate({ xp: xpForTask(task), message: '¡Hecha!' });
     load();
   }
 

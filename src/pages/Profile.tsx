@@ -8,6 +8,7 @@ import {
   IconUpload,
   IconCrown,
   IconChevronRight,
+  IconBellRinging,
 } from '@tabler/icons-react';
 import { supabase } from '@/lib/supabase';
 import { PLANS, type Plan } from '@/lib/plans';
@@ -23,8 +24,10 @@ import { Toggle } from '@/components/ui/Toggle';
 import { TeamSection } from '@/components/settings/TeamSection';
 import { sendEmail, emailTemplate } from '@/lib/email';
 import { applyBrandColor, FONT_STACKS, resizeImageToDataUrl, cn } from '@/lib/utils';
+import { currentSubscription, disablePush, enablePush, sendTestPush } from '@/lib/push';
 
-const BRAND_COLORS = ['#F2741B', '#FF2D55', '#34C759', '#007AFF', '#AF52DE', '#FF3B30', '#5856D6', '#FFCC00'];
+// Temas curados: Naranja DUO, Océano, Bosque, Uva, Coral (+ selector libre).
+const BRAND_COLORS = ['#F2741B', '#1CB0F6', '#2FB344', '#9D5CF0', '#FF6B6B'];
 const FONTS = [
   { key: 'system', label: 'Sistema' },
   { key: 'inter', label: 'Inter' },
@@ -55,7 +58,38 @@ export function Profile() {
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [pushOn, setPushOn] = useState(false);
+  const [pushTesting, setPushTesting] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    void currentSubscription().then((s) => setPushOn(Boolean(s)));
+  }, []);
+
+  async function togglePush(next: boolean) {
+    if (!user) return;
+    if (next) {
+      const res = await enablePush(user.id);
+      if (res.ok) {
+        setPushOn(true);
+        toast('Notificaciones activadas en este dispositivo', 'success');
+      } else {
+        toast(res.error ?? 'No se pudo activar', 'error');
+      }
+    } else {
+      await disablePush();
+      setPushOn(false);
+      toast('Notificaciones desactivadas', 'info');
+    }
+  }
+
+  async function testPush() {
+    setPushTesting(true);
+    const res = await sendTestPush();
+    setPushTesting(false);
+    if (res.ok) toast('Notificación enviada — mirala llegar 👀', 'success');
+    else toast(res.error ?? 'No se pudo enviar', 'error');
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -320,6 +354,26 @@ export function Profile() {
             <Button size="sm" variant="secondary" loading={sendingTest} onClick={sendTestEmail}>
               Probar
             </Button>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-ios-sep py-2">
+            <div className="flex items-center gap-2">
+              <IconBellRinging size={20} className="text-ios-text-2" />
+              <div>
+                <span className="block text-sm text-ios-text">Push en este dispositivo</span>
+                <span className="text-[11px] text-ios-text-3">
+                  {pushOn ? 'Activadas · te avisamos de tareas y recordatorios' : 'Avisos aunque la app esté cerrada'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {pushOn && (
+                <Button size="sm" variant="secondary" loading={pushTesting} onClick={testPush}>
+                  Probar
+                </Button>
+              )}
+              <Toggle checked={pushOn} onChange={togglePush} />
+            </div>
           </div>
         </Card>
 

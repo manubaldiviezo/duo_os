@@ -4,6 +4,7 @@ import { useAuthListener } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { applyTheme } from '@/lib/utils';
 import { AppShell } from '@/components/layout/AppShell';
+import { CelebrationHost } from '@/components/ui/CelebrationHost';
 import { ToastContainer } from '@/components/ui/Toast';
 import { LoadingDots } from '@/components/ui/LoadingDots';
 
@@ -24,6 +25,7 @@ const Profile = lazy(() => import('@/pages/Profile').then((m) => ({ default: m.P
 const Plans = lazy(() => import('@/pages/Plans').then((m) => ({ default: m.Plans })));
 const Ideas = lazy(() => import('@/pages/Ideas').then((m) => ({ default: m.Ideas })));
 const Meetings = lazy(() => import('@/pages/Meetings').then((m) => ({ default: m.Meetings })));
+const Progress = lazy(() => import('@/pages/Progress').then((m) => ({ default: m.Progress })));
 
 function FullScreenLoader() {
   return (
@@ -80,6 +82,7 @@ export default function App() {
               <Route path="/finanzas" element={<Finance />} />
               <Route path="/ideas" element={<Ideas />} />
               <Route path="/reuniones" element={<Meetings />} />
+              <Route path="/progreso" element={<Progress />} />
               <Route path="/planes" element={<Plans />} />
               <Route path="/perfil" element={<Profile />} />
             </Route>
@@ -88,6 +91,7 @@ export default function App() {
         )}
       </Routes>
       </Suspense>
+      <CelebrationHost />
     </>
   );
 }

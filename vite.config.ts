@@ -30,6 +30,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Los manejadores de push viven en public/push-sw.js y se importan
+        // dentro del service worker generado por la PWA.
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
