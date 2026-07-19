@@ -181,7 +181,7 @@ export function applyBrandColor(hex?: string | null): void {
 }
 
 export const FONT_STACKS: Record<string, string> = {
-  system: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif",
+  system: "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   inter: "'Inter', sans-serif",
   poppins: "'Poppins', sans-serif",
   montserrat: "'Montserrat', sans-serif",

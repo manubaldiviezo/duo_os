@@ -2,30 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   DUO Community 2.0 — paleta clara cálida y amigable
+   (identidad aprobada: cálido como Duolingo, pro como Linear)
+   El acento es personalizable; los neutros y semánticos son fijos.
+   ============================================================ */
 :root {
+  color-scheme: light;
+
   --brand: #f2741b;
-  --brand-d: #c75a11;
-  --brand-l: #fcead9;
+  --brand-d: #d45e0b;
+  --brand-l: #ffead9;
   --brand-2: #ffb037;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
-  --ios-bg: #f2f2f7;
+
+  --font-sans: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Neutros cálidos */
+  --ios-bg: #f7f4ee;
   --ios-card: #ffffff;
-  --ios-text: #000000;
-  --ios-text-2: #3c3c43;
-  --ios-text-3: #8e8e93;
-  --ios-sep: rgba(60, 60, 67, 0.12);
+  --ios-text: #3b3a35;
+  --ios-text-2: #6f695e;
+  --ios-text-3: #b0a99c;
+  --ios-sep: #ebe5da;
+
+  /* Semánticos (significado fijo: verde=hecho, rojo=vencido, dorado=XP/dinero) */
+  --ok: #58cc02;
+  --ok-d: #46a302;
+  --ok-l: #eaf8dc;
+  --bad: #ff4b4b;
+  --bad-l: #ffe8e6;
+  --gold: #e8a200;
+  --gold-d: #c78b00;
+  --gold-l: #fff4d6;
+  --blue: #1cb0f6;
+  --blue-l: #e2f4fe;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ios-bg: #000000;
-    --ios-card: #1c1c1e;
-    --ios-text: #ffffff;
-    --ios-text-2: rgba(235, 235, 245, 0.6);
-    --ios-text-3: rgba(235, 235, 245, 0.3);
-    --ios-sep: rgba(84, 84, 88, 0.65);
-  }
-}
+/* Temas de acento elegibles por el usuario (data-accent en <html>) */
+:root[data-accent='oceano'] { --brand: #1cb0f6; --brand-d: #0e8dcb; --brand-l: #e2f4fe; }
+:root[data-accent='bosque'] { --brand: #2fb344; --brand-d: #239134; --brand-l: #e3f6e6; }
+:root[data-accent='uva']    { --brand: #9d5cf0; --brand-d: #7f3fd6; --brand-l: #f1e7fe; }
+:root[data-accent='coral']  { --brand: #ff6b6b; --brand-d: #e04f4f; --brand-l: #ffe9e6; }
 
 * {
   box-sizing: border-box;
@@ -68,11 +85,64 @@ body {
   }
 }
 
+/* Botón flotante del asistente (micrófono central en la barra) */
+.fab-mic {
+  position: absolute;
+  left: 50%;
+  top: -26px;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  background: var(--brand);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  border: 4px solid var(--ios-bg);
+  cursor: pointer;
+  box-shadow:
+    0 4px 0 var(--brand-d),
+    0 12px 28px -6px color-mix(in srgb, var(--brand) 45%, transparent);
+  transition: transform 0.1s ease;
+}
+.fab-mic:active {
+  transform: translateX(-50%) translateY(3px);
+  box-shadow: 0 0 0 var(--brand-d);
+}
+
+/* Confetti de celebración */
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+}
+.cpiece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  animation: cfly 0.95s cubic-bezier(0.15, 0.85, 0.3, 1) forwards;
+}
+@keyframes cfly {
+  to {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
 /* Evita el zoom automático de iOS al enfocar campos (ocurre con font-size < 16px). */
 @media (max-width: 767px) {
   input,
   select,
   textarea {
     font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 }

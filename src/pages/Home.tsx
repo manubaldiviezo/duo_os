@@ -197,6 +197,13 @@ export function Home() {
             >
               {showMoney ? <IconEyeOff size={20} /> : <IconEye size={20} />}
             </button>
+            <button
+              onClick={() => navigate('/perfil')}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-l text-sm font-extrabold text-brand-d"
+              aria-label="Perfil"
+            >
+              {(profile?.user_name ?? 'U').slice(0, 1).toUpperCase()}
+            </button>
           </div>
         }
       />
