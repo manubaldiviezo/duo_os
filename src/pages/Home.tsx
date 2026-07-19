@@ -386,8 +386,8 @@ export function Home() {
           {/* ---------- digest semanal ---------- */}
           {minutesSaved > 0 && (
             <p className="text-center text-xs font-extrabold" style={{ color: 'var(--gold-d)' }}>
-              Esta semana delegaste {delegatedDoneWeek.length} tarea{delegatedDoneWeek.length > 1 ? 's' : ''} ·{' '}
-              {Math.floor(minutesSaved / 60)} h {minutesSaved % 60} min recuperados
+              💪 El equipo cumplió {delegatedDoneWeek.length} reto{delegatedDoneWeek.length > 1 ? 's' : ''} esta semana y te
+              devolvió {Math.floor(minutesSaved / 60)} h {minutesSaved % 60} min para hacer crecer la agencia
             </p>
           )}
         </div>

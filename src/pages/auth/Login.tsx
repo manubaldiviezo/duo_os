@@ -34,7 +34,7 @@ export function Login() {
             <Logo size={76} />
           </div>
           <h1 className="text-2xl font-bold text-ios-text">DUO Community</h1>
-          <p className="mt-1 text-sm text-ios-text-3">El sistema operativo con IA para tu agencia</p>
+          <p className="mt-1 text-sm text-ios-text-3">El copiloto con IA para equipos que crecen juntos</p>
         </div>
 
         {/* Opción principal */}

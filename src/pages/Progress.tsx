@@ -127,7 +127,7 @@ export function Progress() {
 
   return (
     <div className="space-y-5 pb-8">
-      <TopBar title="Progreso" subtitle="El juego del equipo" />
+      <TopBar title="Progreso" subtitle="Retos del equipo · ganar-ganar" />
       <div className="space-y-4 px-5">
         <Card className="flex items-center gap-3" style={{ background: 'var(--gold-l)', borderColor: '#f3dfa4' }}>
           <IconTrophy size={28} style={{ color: 'var(--gold-d)' }} />
@@ -136,7 +136,7 @@ export function Progress() {
               {totalMes.toLocaleString('es-BO')} XP del equipo este mes
             </p>
             <p className="text-xs font-semibold text-ios-text-2">
-              XP por tarea: 30–60 según dificultad · +15 por entregar a tiempo
+              Cada tarea cumplida suma para todos · 30–60 XP según el reto · +15 por puntualidad
             </p>
           </div>
         </Card>
@@ -150,8 +150,8 @@ export function Progress() {
         )}
 
         <p className="px-1 text-center text-xs font-semibold text-ios-text-3">
-          Próximamente: metas y bonificaciones configurables por agencia (dinero, día libre o
-          simbólicas) y liga opcional.
+          Mientras el equipo gana retos y bonos, la agencia crece y llegan más clientes: ganar-ganar.
+          Próximamente: bonificaciones configurables (dinero, día libre) y liga por equipos.
         </p>
       </div>
     </div>
