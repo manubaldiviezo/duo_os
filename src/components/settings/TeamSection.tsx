@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { IconPlus, IconTrash, IconEdit, IconX } from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconEdit, IconX, IconBrandWhatsapp, IconCopy } from '@tabler/icons-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -107,23 +107,64 @@ export function TeamSection() {
         </p>
       )}
 
-      {members.map((m) => (
-        <div key={m.id} className="flex items-center gap-3">
-          <Avatar name={m.name} size={36} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-ios-text">{m.name}</p>
-            <p className="truncate text-xs text-ios-text-3">
-              {[m.role, m.email].filter(Boolean).join(' · ') || 'Sin datos'}
-            </p>
+      {members.map((m) => {
+        const joined = Boolean(m.member_user_id);
+        const inviteMsg = `Hola ${m.name} 👋 Te invito a nuestro equipo en DUO Community.\n1) Entrá a https://duocommunity.lat y creá tu cuenta\n2) Ingresá este código de equipo: ${m.invite_code}\n¡Ahí vas a ver tus tareas, tu XP y tus retos! 💪`;
+        return (
+          <div key={m.id} className="space-y-1.5">
+            <div className="flex items-center gap-3">
+              <Avatar name={m.name} size={36} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-ios-text">{m.name}</p>
+                <p className="truncate text-xs text-ios-text-3">
+                  {[m.role, m.email].filter(Boolean).join(' · ') || 'Sin datos'}
+                </p>
+              </div>
+              <button onClick={() => openEdit(m)} className="text-ios-text-3">
+                <IconEdit size={18} />
+              </button>
+              <button onClick={() => remove(m)} className="text-ios-red">
+                <IconTrash size={18} />
+              </button>
+            </div>
+            <div className="ml-12 flex items-center gap-2">
+              {joined ? (
+                <span
+                  className="rounded-full px-2.5 py-1 text-[11px] font-extrabold"
+                  style={{ background: 'var(--ok-l)', color: 'var(--ok-d)' }}
+                >
+                  ✓ en el equipo — ve sus tareas en la app
+                </span>
+              ) : (
+                <>
+                  <span className="rounded-lg bg-ios-bg px-2.5 py-1 font-mono text-xs font-extrabold tracking-widest text-ios-text">
+                    {m.invite_code}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(m.invite_code ?? '');
+                      toast('Código copiado', 'success');
+                    }}
+                    className="text-ios-text-3"
+                    aria-label="Copiar código"
+                  >
+                    <IconCopy size={16} />
+                  </button>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(inviteMsg)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold"
+                    style={{ background: 'var(--ok-l)', color: 'var(--ok-d)' }}
+                  >
+                    <IconBrandWhatsapp size={13} /> invitar
+                  </a>
+                </>
+              )}
+            </div>
           </div>
-          <button onClick={() => openEdit(m)} className="text-ios-text-3">
-            <IconEdit size={18} />
-          </button>
-          <button onClick={() => remove(m)} className="text-ios-red">
-            <IconTrash size={18} />
-          </button>
-        </div>
-      ))}
+        );
+      })}
 
       {adding && (
         <div className="space-y-2 rounded-xl bg-ios-bg p-3">

@@ -41,6 +41,9 @@ export interface Profile {
   plan_started_at: string | null;
   ai_messages_month: number | null;
   ai_messages_reset: string | null;
+  /* Modo equipos: si están seteados, esta cuenta es un MIEMBRO de otro workspace. */
+  linked_owner_id: string | null;
+  member_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -101,6 +104,8 @@ export interface TeamMember {
   name: string;
   email: string | null;
   role: string | null;
+  invite_code: string | null;
+  member_user_id: string | null;
   created_at: string;
 }
 

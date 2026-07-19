@@ -26,6 +26,7 @@ const Plans = lazy(() => import('@/pages/Plans').then((m) => ({ default: m.Plans
 const Ideas = lazy(() => import('@/pages/Ideas').then((m) => ({ default: m.Ideas })));
 const Meetings = lazy(() => import('@/pages/Meetings').then((m) => ({ default: m.Meetings })));
 const Progress = lazy(() => import('@/pages/Progress').then((m) => ({ default: m.Progress })));
+const MemberHome = lazy(() => import('@/pages/MemberHome').then((m) => ({ default: m.MemberHome })));
 
 function FullScreenLoader() {
   return (
@@ -52,6 +53,8 @@ export default function App() {
 
   const authed = Boolean(session);
   const needsOnboarding = authed && profile && !profile.onboarding_completed;
+  // Cuenta vinculada a un workspace ajeno = vista de MIEMBRO (sin finanzas ni ajustes).
+  const isMember = authed && Boolean(profile?.linked_owner_id && profile?.member_id);
 
   return (
     <>
@@ -65,6 +68,8 @@ export default function App() {
 
         {!authed ? (
           <Route path="*" element={<Navigate to="/login" replace />} />
+        ) : isMember ? (
+          <Route path="*" element={<MemberHome />} />
         ) : needsOnboarding ? (
           <>
             <Route path="/onboarding" element={<Onboarding />} />

@@ -446,7 +446,7 @@ export function Assistant() {
                 <button
                   key={s.label}
                   onClick={() => send(s.prompt)}
-                  className="rounded-xl bg-ios-card px-4 py-3 text-left text-sm text-ios-text"
+                  className="rounded-2xl border-[1.5px] border-ios-sep bg-ios-card px-4 py-3 text-left text-sm font-bold text-ios-text shadow-[0_2px_0_rgba(59,44,20,0.05)] transition-transform active:translate-y-[1px]"
                 >
                   {s.label}
                 </button>
@@ -455,63 +455,67 @@ export function Assistant() {
           </div>
         )}
 
-        {messages.map((m, i) => (
-          <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
-            <div
-              className={cn(
-                'max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm',
-                m.role === 'user'
-                  ? 'rounded-br-md bg-brand text-white'
-                  : 'rounded-bl-md bg-ios-card text-ios-text'
-              )}
-            >
-              {m.text}
+        {messages.map((m, i) =>
+          m.role === 'user' ? (
+            <div key={i} className="flex justify-end">
+              <div className="max-w-[82%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-brand px-4 py-2.5 text-sm font-medium leading-relaxed text-white shadow-[0_2px_0_var(--brand-d)]">
+                {m.text}
+              </div>
             </div>
-          </div>
-        ))}
+          ) : (
+            /* Respuesta del agente estilo "asistente pro": logo + texto plano sin burbuja */
+            <div key={i} className="flex gap-2.5 pr-4">
+              <img src="/icon-192.png" alt="" className="mt-0.5 h-7 w-7 shrink-0 rounded-lg shadow-sm" />
+              <div className="min-w-0 flex-1 whitespace-pre-wrap pt-0.5 text-[15px] leading-relaxed text-ios-text">
+                {m.text}
+              </div>
+            </div>
+          )
+        )}
 
         {pending && (
-          <div className="rounded-2xl border border-brand/30 bg-ios-card p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <IconSparkles size={18} className="text-brand" />
-              <span className="text-sm font-semibold text-ios-text">{pending.desc.title}</span>
+          <div className="overflow-hidden rounded-2xl border-[1.5px] border-ios-sep bg-ios-card shadow-sm">
+            <div className="flex items-center gap-2 border-b border-ios-sep bg-brand-l px-4 py-2.5">
+              <IconSparkles size={16} className="text-brand-d" />
+              <span className="font-mono text-[11px] font-extrabold uppercase tracking-widest text-brand-d">
+                {pending.desc.title}
+              </span>
             </div>
 
             {pending.desc.lines.length > 0 && (
-              <div className="mb-3 space-y-0.5">
+              <div className="space-y-1 px-4 py-3">
                 {pending.desc.lines.map((line, index) => (
-                  <p key={index} className="text-sm text-ios-text-2">
+                  <p key={index} className="text-sm font-medium leading-snug text-ios-text">
                     {line}
                   </p>
                 ))}
               </div>
             )}
 
-            <p className="mb-3 text-xs text-ios-text-3">
-              {pending.action.confirmation_message ?? '¿Confirmas esta acción?'}
-            </p>
-
-            <div className="flex gap-2">
-              <Button size="sm" className="flex-1" onClick={confirmAction}>
-                <span className="flex items-center justify-center gap-1">
-                  <IconCheck size={16} /> Confirmar
-                </span>
-              </Button>
-
-              <Button size="sm" variant="secondary" className="flex-1" onClick={cancelAction}>
-                <span className="flex items-center justify-center gap-1">
-                  <IconX size={16} /> Cancelar
-                </span>
-              </Button>
+            <div className="px-4 pb-4">
+              <p className="mb-3 text-xs font-semibold text-ios-text-3">
+                {pending.action.confirmation_message ?? '¿Confirmas esta acción?'}
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="secondary" className="flex-1" onClick={cancelAction}>
+                  <span className="flex items-center justify-center gap-1">
+                    <IconX size={16} /> Corregir
+                  </span>
+                </Button>
+                <Button size="sm" className="flex-1" onClick={confirmAction}>
+                  <span className="flex items-center justify-center gap-1">
+                    <IconCheck size={16} /> Confirmar
+                  </span>
+                </Button>
+              </div>
             </div>
           </div>
         )}
 
         {thinking && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl rounded-bl-md bg-ios-card px-4 py-3">
-              <LoadingDots />
-            </div>
+          <div className="flex items-center gap-2.5">
+            <img src="/icon-192.png" alt="" className="h-7 w-7 shrink-0 animate-pulse rounded-lg" />
+            <LoadingDots />
           </div>
         )}
       </div>

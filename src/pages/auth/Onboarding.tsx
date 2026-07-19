@@ -28,6 +28,27 @@ export function Onboarding() {
   const [userName, setUserName] = useState(profile?.user_name ?? '');
   const [color, setColor] = useState('#F2741B');
   const [loading, setLoading] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joining, setJoining] = useState(false);
+
+  async function joinTeam() {
+    if (!user || joinCode.trim().length < 4) {
+      toast('Ingresá el código que te compartieron', 'error');
+      return;
+    }
+    setJoining(true);
+    const { data, error } = await supabase.rpc('join_team', { p_code: joinCode.trim() });
+    setJoining(false);
+    if (error || !data?.ok) {
+      toast(data?.error ?? error?.message ?? 'Código inválido', 'error');
+      return;
+    }
+    toast(`¡Bienvenido al equipo de ${data.agency}! 🎉`, 'success');
+    // Refresca el perfil vinculado y entra a la vista de miembro.
+    const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    if (p) setProfile(p);
+    window.location.href = '/';
+  }
 
   async function finish(loadDemo: boolean) {
     if (!user) return;
@@ -103,6 +124,26 @@ export function Onboarding() {
             <Button size="lg" className="w-full" onClick={() => setStep(1)}>
               Continuar
             </Button>
+
+            {/* Miembro de un equipo existente: entra con su código */}
+            <div className="rounded-2xl border border-ios-sep bg-ios-card p-4">
+              <p className="text-sm font-bold text-ios-text">¿Te invitaron a un equipo? 🤝</p>
+              <p className="mb-2 text-xs text-ios-text-3">
+                Ingresá el código que te pasó tu líder y unite a sus retos.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="CÓDIGO"
+                  maxLength={6}
+                  className="w-full min-w-0 flex-1 rounded-xl bg-ios-bg px-3 py-2.5 text-center font-mono text-base font-extrabold tracking-widest text-ios-text outline-none"
+                />
+                <Button loading={joining} onClick={joinTeam}>
+                  Unirme
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
