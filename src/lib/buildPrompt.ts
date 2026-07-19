@@ -139,6 +139,15 @@ SOLO un objeto JSON válido (sin texto antes/después). El usuario confirmará a
   "confirmation_message": "Voy a cambiar tu meta mensual a $5,000 USD. ¿Confirmas?"
 }
 
+8) VARIAS órdenes en un solo mensaje (tocan distintos apartados a la vez):
+{
+  "action": "multi",
+  "actions": [ {acción 1 con su mismo formato de arriba}, {acción 2}, ... ],
+  "confirmation_message": "Voy a hacer N cosas: ... ¿Confirmas?"
+}
+Ejemplo: "marcá cobrado el pago de Femmeninas y creale a Valeria la tarea del informe para el viernes"
+-> multi con [mark_payment_paid, create_tasks]. Usa multi SIEMPRE que el usuario pida más de una cosa.
+
 Reglas para extracción (MUY IMPORTANTES):
 - Crea EXACTAMENTE las tareas que el usuario describió, ni una más. PROHIBIDO inventar tareas, clientes o ejemplos.
 - Si el usuario NO menciona una fecha, deja "due_date" en null. NUNCA inventes una fecha.

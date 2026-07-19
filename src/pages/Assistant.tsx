@@ -521,12 +521,12 @@ export function Assistant() {
           <button
             onClick={micClick}
             className={cn(
-              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-              isRecording ? 'animate-pulse-slow bg-ios-red text-white' : 'bg-brand-l text-brand'
+              'flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white transition-transform active:translate-y-[2px] active:shadow-none',
+              isRecording ? 'animate-pulse-slow bg-ios-red shadow-[0_4px_0_#c72c23]' : 'bg-brand shadow-[0_4px_0_var(--brand-d)]'
             )}
             aria-label="Dictar"
           >
-            {isRecording ? <IconPlayerStopFilled size={18} /> : <IconMicrophone size={18} />}
+            {isRecording ? <IconPlayerStopFilled size={24} /> : <IconMicrophone size={24} />}
           </button>
         )}
 

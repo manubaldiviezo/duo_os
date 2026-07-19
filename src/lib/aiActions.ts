@@ -18,6 +18,7 @@ const KNOWN_ACTIONS = [
   'add_transaction',
   'mark_payment_paid',
   'update_mrr_goal',
+  'multi',
 ];
 
 /** Convierte una fecha de la IA a ISO sin desfase: fecha sola = medianoche LOCAL. */
@@ -113,6 +114,14 @@ export function describeAction(a: AIAction): { title: string; lines: string[] } 
         title: 'Actualizar meta mensual',
         lines: [`• Nueva meta: $${goal.toLocaleString('en-US')} USD`],
       };
+    }
+    case 'multi': {
+      const actions = Array.isArray(a.actions) ? (a.actions as AIAction[]) : [];
+      const lines = actions.flatMap((sub) => {
+        const d = describeAction(sub);
+        return [`▸ ${d.title}`, ...d.lines.map((l) => `  ${l}`)];
+      });
+      return { title: `${actions.length} acciones en un paso`, lines };
     }
     default:
       return { title: 'Acción', lines: [] };
@@ -333,6 +342,15 @@ export async function executeAction(
       return `Meta mensual actualizada a $${goal.toLocaleString('en-US')} USD.`;
     }
 
+    case 'multi': {
+      const actions = Array.isArray(a.actions) ? (a.actions as AIAction[]) : [];
+      if (!actions.length) return 'No recibí acciones válidas.';
+      const results: string[] = [];
+      for (const sub of actions) {
+        results.push(await executeAction(sub, ctx));
+      }
+      return results.join('\n');
+    }
     default:
       return 'No reconozco esa acción.';
   }
